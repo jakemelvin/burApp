@@ -1,12 +1,11 @@
 package com.packt.blurApp.service.party;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
-import com.packt.blurApp.BlurAppApplication;
-import com.packt.blurApp.dto.Party.AddPartyDto;
 import com.packt.blurApp.dto.Party.PartyUpdateDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Party;
@@ -45,25 +44,31 @@ public class PartyService implements IPartyService {
     try {
       Optional<Party> existingPartyOptional = partyRepository.findById(partyId);
       if (existingPartyOptional.isPresent()) {
-        Set<Race> racesToAdd = null;
         Party existingParty = existingPartyOptional.get();
-        updatedParty.getRaceIds().forEach(raceId -> {
-          try {
-            racesToAdd.add(raceService.getRaceById(raceId));
-          } catch (ResourceNotFoundExceptions e) {
-            throw new ResourceNotFoundExceptions("Race Not found!");
-          }
-        });
+        Set<Race> racesToAdd = new HashSet<>();
 
-        racesToAdd.forEach(existingParty::addRace);
+        if (updatedParty.getRaceIds() != null && !updatedParty.getRaceIds().isEmpty()) {
+          updatedParty.getRaceIds().forEach(raceId -> {
+            try {
+              Race race = raceService.getRaceById(raceId);
+              racesToAdd.add(race);
+            } catch (ResourceNotFoundExceptions e) {
+              throw new ResourceNotFoundExceptions("Race Not found with ID: " + raceId);
+            }
+          });
 
+          racesToAdd.forEach(existingParty::addRace);
+        }
         return partyRepository.save(existingParty);
       } else {
-        throw new ResourceNotFoundExceptions("Party Not Found");
+        throw new ResourceNotFoundExceptions("Party Not Found with ID: " + partyId);
       }
     } catch (ResourceNotFoundExceptions e) {
-      throw new ResourceNotFoundExceptions("Resources not found!");
+      throw e;
+    } catch (Exception e) {
+      throw new ResourceNotFoundExceptions("Error updating Party: " + e.getMessage());
     }
+
   }
 
 }

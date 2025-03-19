@@ -36,4 +36,24 @@ public class Race {
   private Party party;
   @OneToMany(mappedBy = "race")
   private Set<RaceParameters> raceParameters;
+
+  public void addRaceParameter(RaceParameters raceParameter) {
+    raceParameters.add(raceParameter);
+    raceParameter.setRace(this);
+  }
+
+  public void removeRaceParameter(RaceParameters raceParameter) {
+    raceParameters.remove(raceParameter);
+    raceParameter.setRace(null);
+  }
+
+  public void addRacers(User racer) {
+    racers.add(racer);
+    racer.setRace(this);
+  }
+
+  public void removeRacers(User racer) {
+    racers.remove(racer);
+    racer.setRace(null);
+  }
 }

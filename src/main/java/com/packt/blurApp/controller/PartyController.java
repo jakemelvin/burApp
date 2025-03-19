@@ -17,7 +17,6 @@ import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Party;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.party.IPartyService;
-import com.packt.blurApp.service.party.PartyService;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import lombok.RequiredArgsConstructor;

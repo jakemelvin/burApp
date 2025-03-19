@@ -20,6 +20,7 @@ public class Score {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
+  private int value;
   @ManyToOne
   @JoinColumn(name = "race_id")
   private Race race;
