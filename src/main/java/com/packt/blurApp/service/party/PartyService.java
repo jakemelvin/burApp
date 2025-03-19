@@ -11,7 +11,7 @@ import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Party;
 import com.packt.blurApp.model.Race;
 import com.packt.blurApp.repository.PartyRepository;
-import com.packt.blurApp.service.race.IRaceService;
+import com.packt.blurApp.repository.RaceRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -20,7 +20,7 @@ public class PartyService implements IPartyService {
 
   private final PartyRepository partyRepository;
 
-  private final IRaceService raceService;
+  private final RaceRepository raceRepository;
 
   @Override
   public Party createParty() {
@@ -50,8 +50,8 @@ public class PartyService implements IPartyService {
         if (updatedParty.getRaceIds() != null && !updatedParty.getRaceIds().isEmpty()) {
           updatedParty.getRaceIds().forEach(raceId -> {
             try {
-              Race race = raceService.getRaceById(raceId);
-              racesToAdd.add(race);
+              Optional<Race> race = raceRepository.findById(raceId);
+              racesToAdd.add(race.get());
             } catch (ResourceNotFoundExceptions e) {
               throw new ResourceNotFoundExceptions("Race Not found with ID: " + raceId);
             }

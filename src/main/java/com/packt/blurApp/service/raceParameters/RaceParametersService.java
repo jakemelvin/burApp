@@ -17,6 +17,7 @@ public class RaceParametersService implements IRaceParametersService {
   public RaceParameters getRaceParameterById(Long id) {
     return raceParametersRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundExceptions("Race Parameters not found!"));
-  }
+  
+      }
 
 }
