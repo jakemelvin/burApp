@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.packt.blurApp.repository.RaceRepository;
 import org.springframework.stereotype.Service;
 import com.packt.blurApp.dto.Party.PartyUpdateDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
@@ -20,7 +21,7 @@ public class PartyService implements IPartyService {
 
   private final PartyRepository partyRepository;
 
-  private final IRaceService raceService;
+  private final RaceRepository raceRepository;
 
   @Override
   public Party createParty() {
@@ -50,7 +51,7 @@ public class PartyService implements IPartyService {
         if (updatedParty.getRaceIds() != null && !updatedParty.getRaceIds().isEmpty()) {
           updatedParty.getRaceIds().forEach(raceId -> {
             try {
-              Race race = raceService.getRaceById(raceId);
+              Race race = raceRepository.findById(raceId).orElseThrow(() -> new ResourceNotFoundExceptions("Race not Found!"));
               racesToAdd.add(race);
             } catch (ResourceNotFoundExceptions e) {
               throw new ResourceNotFoundExceptions("Race Not found with ID: " + raceId);
