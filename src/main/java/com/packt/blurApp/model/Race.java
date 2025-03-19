@@ -1,5 +1,6 @@
 package com.packt.blurApp.model;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
@@ -27,33 +30,32 @@ public class Race {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
   @OneToMany(mappedBy = "race")
-  private Set<Score> scores;
-  @OneToMany(mappedBy = "race", cascade = CascadeType.ALL)
-  private Set<User> racers;
+  private Set<Score> scores = new HashSet<>();
+  @OneToMany(mappedBy = "races", cascade = CascadeType.ALL)
+  private Set<User> racers = new HashSet<>();
   @ManyToOne
   @JsonIgnore
   @JoinColumn(name = "party_id")
   private Party party;
-  @OneToMany(mappedBy = "race")
-  private Set<RaceParameters> raceParameters;
+  @ManyToMany
+  @JoinTable(name = "race_race_parameters", joinColumns = @JoinColumn(name = "race_id"), inverseJoinColumns = @JoinColumn(name = "race_parameters_id"))
+  private Set<RaceParameters> raceParameters = new HashSet<>();
 
   public void addRaceParameter(RaceParameters raceParameter) {
     raceParameters.add(raceParameter);
-    raceParameter.setRace(this);
   }
 
   public void removeRaceParameter(RaceParameters raceParameter) {
     raceParameters.remove(raceParameter);
-    raceParameter.setRace(null);
   }
 
   public void addRacers(User racer) {
     racers.add(racer);
-    racer.setRace(this);
+    racer.addRace(this);
   }
 
   public void removeRacers(User racer) {
     racers.remove(racer);
-    racer.setRace(null);
+    racer.removeRace(this);
   }
 }

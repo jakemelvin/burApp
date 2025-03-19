@@ -40,7 +40,12 @@ public class RaceService implements IRaceService {
     raceParametersDtos.forEach(parameter -> {
       RaceParameters raceParam = raceParametersService.getRaceParameterById(parameter.getId());
       if (raceParam != null) {
-        createdRace.addRaceParameter(raceParam);
+        raceParam.setIsChecked(parameter.getIsChecked());
+        if (raceParam.getIsChecked()) {
+          boolean randomBoolean = Math.random() < 0.5;
+          raceParam.setIsActive(randomBoolean);
+          createdRace.getRaceParameters().add(raceParam);
+        }
       }
     });
     return raceRepository.save(createdRace);
@@ -60,6 +65,20 @@ public class RaceService implements IRaceService {
       return raceRepository.save(raceToUpdate);
     } catch (ResourceNotFoundExceptions e) {
       throw new ResourceNotFoundExceptions(e.getMessage());
+    }
+  }
+
+  @Override
+  public List<Race> getAllRaces() {
+    return raceRepository.findAll();
+  }
+
+  @Override
+  public List<Race> getRaceByPartyId(Long partyId) {
+    try {
+      return raceRepository.findByParty_Id(partyId);
+    } catch (ResourceNotFoundExceptions e) {
+      throw new ResourceNotFoundExceptions("Race not found");
     }
   }
 

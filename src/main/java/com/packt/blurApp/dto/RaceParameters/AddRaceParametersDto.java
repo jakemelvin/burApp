@@ -9,4 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AddRaceParametersDto {
   Long id;
+  Boolean isChecked;
 }
