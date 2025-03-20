@@ -40,6 +40,7 @@ public class PermissionController {
 
   @PostMapping("/create")
   public ResponseEntity<ApiResponse> createPermission(@RequestBody AddPermissionDto addPermissionDto) {
-    return ResponseEntity.ok(new ApiResponse("Permission created successfully", addPermissionDto));
+    return ResponseEntity
+        .ok(new ApiResponse("Permission created successfully", permissionService.createPermission(addPermissionDto)));
   }
 }

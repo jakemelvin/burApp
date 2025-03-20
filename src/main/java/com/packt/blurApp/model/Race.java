@@ -31,10 +31,9 @@ public class Race {
   private Long id;
   @OneToMany(mappedBy = "race")
   private Set<Score> scores = new HashSet<>();
-  @OneToMany(mappedBy = "races", cascade = CascadeType.ALL)
+  @ManyToMany(mappedBy = "races")
   private Set<User> racers = new HashSet<>();
   @ManyToOne
-  @JsonIgnore
   @JoinColumn(name = "party_id")
   private Party party;
   @ManyToMany

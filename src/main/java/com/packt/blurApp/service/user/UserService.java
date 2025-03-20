@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.packt.blurApp.dto.User.AddUserDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.User;
+import com.packt.blurApp.repository.PermissionRepository;
 import com.packt.blurApp.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserService implements IUserService {
   private final UserRepository userRepository;
+  private final PermissionRepository permissionRepository;
 
   @Override
   public User getUserById(Long userId) {
@@ -23,22 +25,21 @@ public class UserService implements IUserService {
 
   @Override
   public User createUser(AddUserDto addUserDto) {
-    User newUser = new User();
-    newUser.setPassword(addUserDto.getPassword());
-    newUser.setUserName(addUserDto.getUserName());
-    addUserDto.getPermissions().forEach(permission -> {
-      newUser.getPermissions().add(permission);
+    String userName = addUserDto.getUserName();
+    String password = addUserDto.getPassword();
+    User newUser = new User(userName, password);
+    addUserDto.getPermissionsIds().forEach(permission -> {
+      newUser.getPermissions().add(permissionRepository.findById(permission)
+          .orElseThrow(() -> new ResourceNotFoundExceptions("Permission not found!")));
     });
     return userRepository.save(newUser);
   }
 
   @Override
   public void deleteUserById(Long userId) {
-    try {
-      userRepository.deleteById(userId);
-    } catch (ResourceNotFoundExceptions e) {
-      throw new ResourceNotFoundExceptions("User not found");
-    }
+    User userToDelete = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundExceptions("User Not found!"));
+    userRepository.delete(userToDelete);
   }
 
   @Override
