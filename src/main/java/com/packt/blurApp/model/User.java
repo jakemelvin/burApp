@@ -3,6 +3,7 @@ package com.packt.blurApp.model;
 import java.util.HashSet;
 import java.util.Set;
 
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -32,6 +33,11 @@ public class User {
   @ManyToMany
   @JoinTable(name = "user_race_participation", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "race_id"))
   private Set<Race> races = new HashSet<>();
+
+  public User(String userName, String password) {
+    this.userName = userName;
+    this.password = password;
+  }
 
   public void addRace(Race race) {
     this.races.add(race);

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.packt.blurApp.dto.Score.AddScoreDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
+import com.packt.blurApp.mapper.scoreMapper.ScoreMapper;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.score.IScoreService;
 
@@ -26,7 +27,8 @@ public class ScoreController {
   @PostMapping("/add")
   public ResponseEntity<ApiResponse> addScore(@RequestBody AddScoreDto addScoreDto) {
     try {
-      return ResponseEntity.ok(new ApiResponse("Score added successfully", scoreService.addScore(addScoreDto)));
+      return ResponseEntity.ok(new ApiResponse("Score added successfully",
+          ScoreMapper.toScoreResponseDto(scoreService.addScore(addScoreDto))));
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
     }
@@ -36,7 +38,8 @@ public class ScoreController {
   public ResponseEntity<ApiResponse> updateScore(@RequestParam Long scoreId, @RequestBody AddScoreDto updateScoreDto) {
     try {
       return ResponseEntity
-          .ok(new ApiResponse("Score Updated Successfully", scoreService.updateScore(updateScoreDto, scoreId)));
+          .ok(new ApiResponse("Score Updated Successfully",
+              ScoreMapper.toScoreResponseDto(scoreService.updateScore(updateScoreDto, scoreId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }
@@ -45,7 +48,8 @@ public class ScoreController {
   @GetMapping("/get-by-id")
   public ResponseEntity<ApiResponse> getScoreById(@RequestParam Long scoreId) {
     try {
-      return ResponseEntity.ok(new ApiResponse("Score fetched successfully", scoreService.getScoreById(scoreId)));
+      return ResponseEntity.ok(new ApiResponse("Score fetched successfully",
+          ScoreMapper.toScoreResponseDto(scoreService.getScoreById(scoreId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }
@@ -54,7 +58,8 @@ public class ScoreController {
   @GetMapping("/get-by-user-id")
   public ResponseEntity<ApiResponse> getScoreByUserId(@RequestParam Long userId) {
     try {
-      return ResponseEntity.ok(new ApiResponse("Score fetched successfully", scoreService.getScoreByUserId(userId)));
+      return ResponseEntity.ok(new ApiResponse("Score fetched successfully",
+          ScoreMapper.toScoreResponseDtoList(scoreService.getScoreByUserId(userId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }
@@ -64,7 +69,8 @@ public class ScoreController {
   public ResponseEntity<ApiResponse> getScoreByRaceAndUserId(@RequestParam Long raceId, @RequestParam Long userId) {
     try {
       return ResponseEntity
-          .ok(new ApiResponse("Score fetched successfully", scoreService.getScoreByRaceIdAndUserId(raceId, userId)));
+          .ok(new ApiResponse("Score fetched successfully",
+              ScoreMapper.toScoreResponseDto(scoreService.getScoreByRaceIdAndUserId(raceId, userId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }
@@ -73,7 +79,8 @@ public class ScoreController {
   @GetMapping("/get-by-race-id")
   public ResponseEntity<ApiResponse> getScoreByRaceId(@RequestParam Long raceId) {
     try {
-      return ResponseEntity.ok(new ApiResponse("Score fetched successfully", scoreService.getScoreByRaceId(raceId)));
+      return ResponseEntity.ok(new ApiResponse("Score fetched successfully",
+          ScoreMapper.toScoreResponseDtoList(scoreService.getScoreByRaceId(raceId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }

@@ -19,7 +19,6 @@ public class PermissionService implements IPermissionService {
   @Override
   public Permission createPermission(AddPermissionDto addPermissionDto) {
     Permission newPermission = new Permission();
-    newPermission.setIsActive(false);
     newPermission.setName(addPermissionDto.getName());
     return permissionRepository.save(newPermission);
   }
