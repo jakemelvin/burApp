@@ -4,9 +4,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,12 +19,7 @@ public class RaceParameters {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
   private String name;
-  Boolean isActive;
-  Boolean isChecked;
-  @OneToOne
-  @JoinColumn(name = "image_id")
-  Image icon;
-  @ManyToOne
-  @JoinColumn(name = "race_id")
-  private Race race;
+  private Boolean isActive;
+  private Boolean isChecked;
+  private String downloadUrl;
 }

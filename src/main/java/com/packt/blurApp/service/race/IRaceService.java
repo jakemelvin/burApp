@@ -12,4 +12,8 @@ public interface IRaceService {
   Race createRace(Long partyId, List<AddRaceParametersDto> raceParametersDto);
 
   Race updateRacePlayers(List<RacePlayersDto> racePlayers, Long raceId);
+
+  List<Race> getAllRaces();
+
+  List<Race> getRaceByPartyId(Long partyId);
 }

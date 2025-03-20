@@ -1,4 +1,4 @@
-package com.packt.blurApp.dto.RaceParameters;
+package com.packt.blurApp.dto.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AddRaceParametersDto {
-  Long id;
-  Boolean isChecked;
+public class UserResponseDto {
+  private Long id;
+  private String userName;
 }

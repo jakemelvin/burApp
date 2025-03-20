@@ -1,5 +1,7 @@
 package com.packt.blurApp.service.score;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.packt.blurApp.dto.Score.AddScoreDto;
@@ -12,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class ScoreService implements IScoreRepository {
+public class ScoreService implements IScoreService {
 
   private final ScoreRepository scoreRepository;
   private final IUserService userService;
@@ -42,5 +44,33 @@ public class ScoreService implements IScoreRepository {
   @Override
   public Score getScoreById(Long scoreId) {
     return scoreRepository.findById(scoreId).orElseThrow(() -> new ResourceNotFoundExceptions("Score Not found!"));
+  }
+
+  @Override
+  public List<Score> getScoreByUserId(Long userId) {
+    try {
+      return scoreRepository.findByUser_Id(userId);
+    } catch (ResourceNotFoundExceptions e) {
+      throw new ResourceNotFoundExceptions("Score not found");
+
+    }
+  }
+
+  @Override
+  public Score getScoreByRaceIdAndUserId(Long raceId, Long userId) {
+    try {
+      return scoreRepository.findByRace_IdAndUser_Id(raceId, userId);
+    } catch (ResourceNotFoundExceptions e) {
+      throw new ResourceNotFoundExceptions("Resource not found");
+    }
+  }
+
+  @Override
+  public List<Score> getScoreByRaceId(Long raceId) {
+    try {
+      return scoreRepository.findByRace_Id(raceId);
+    } catch (ResourceNotFoundExceptions e) {
+      throw new ResourceNotFoundExceptions("Resource not found");
+    }
   }
 }
