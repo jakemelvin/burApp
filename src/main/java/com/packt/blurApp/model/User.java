@@ -3,7 +3,7 @@ package com.packt.blurApp.model;
 import java.util.HashSet;
 import java.util.Set;
 
-
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -30,6 +30,8 @@ public class User {
   private String password;
   @OneToMany
   private Set<Permission> permissions = new HashSet<>();
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private Set<Score> scores = new HashSet<>();
   @ManyToMany
   @JoinTable(name = "user_race_participation", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "race_id"))
   private Set<Race> races = new HashSet<>();
