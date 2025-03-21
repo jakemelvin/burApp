@@ -46,4 +46,11 @@ public class UserService implements IUserService {
   public List<User> getAllUsers() {
     return userRepository.findAll();
   }
+
+  @Override
+  public User findUserByNameAndPassword(String userName, String password) {
+    return userRepository.findByUserNameAndPassword(userName, password)
+        .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with those credentials!"));
+  }
+
 }
