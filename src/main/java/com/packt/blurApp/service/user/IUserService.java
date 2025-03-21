@@ -13,4 +13,6 @@ public interface IUserService {
   void deleteUserById(Long userId);
 
   List<User> getAllUsers();
+
+  User findUserByNameAndPassword(String userName, String password);
 }
