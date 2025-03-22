@@ -20,6 +20,5 @@ public class RaceParameters {
   private Long id;
   private String name;
   private Boolean isActive;
-  private Boolean isChecked;
   private String downloadUrl;
 }

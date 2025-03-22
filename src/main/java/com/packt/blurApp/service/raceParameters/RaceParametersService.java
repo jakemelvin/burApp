@@ -1,5 +1,7 @@
 package com.packt.blurApp.service.raceParameters;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
@@ -17,7 +19,12 @@ public class RaceParametersService implements IRaceParametersService {
   public RaceParameters getRaceParameterById(Long id) {
     return raceParametersRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundExceptions("Race Parameters not found!"));
-  
-      }
+
+  }
+
+  @Override
+  public List<RaceParameters> getAllRaceParameters() {
+    return raceParametersRepository.findAll();
+  }
 
 }

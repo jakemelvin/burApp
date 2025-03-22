@@ -58,7 +58,7 @@ public class UserController {
   //   }
   // }
 
-  @PostMapping("log-in")
+  @PostMapping("/log-in")
   public ResponseEntity<ApiResponse> signInWithUserNameAndPassword(@RequestBody UserSignInDto userLoginCredentials) {
     try {
       return ResponseEntity
