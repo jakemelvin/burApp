@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.packt.blurApp.dto.RaceParameters.AddRaceParametersDto;
 import com.packt.blurApp.dto.User.RacePlayersDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.mapper.raceMapper.RaceMapper;
@@ -44,12 +43,11 @@ public class RaceController {
   }
 
   @PostMapping("/create-race")
-  public ResponseEntity<ApiResponse> createRace(@RequestParam Long partyId,
-      @RequestBody List<AddRaceParametersDto> raceParametersDtos) {
+  public ResponseEntity<ApiResponse> createRace(@RequestParam Long partyId) {
     try {
       return ResponseEntity
           .ok(new ApiResponse("Race created Successfully",
-              RaceMapper.toRaceResponseDto(raceService.createRace(partyId, raceParametersDtos))));
+              RaceMapper.toRaceResponseDto(raceService.createRace(partyId))));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
     }

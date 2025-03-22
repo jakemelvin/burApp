@@ -6,26 +6,29 @@ import org.springframework.stereotype.Service;
 
 import com.packt.blurApp.dto.Score.AddScoreDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
+import com.packt.blurApp.model.Race;
 import com.packt.blurApp.model.Score;
+import com.packt.blurApp.repository.RaceRepository;
 import com.packt.blurApp.repository.ScoreRepository;
-import com.packt.blurApp.service.race.IRaceService;
-import com.packt.blurApp.service.user.IUserService;
+import com.packt.blurApp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class ScoreService implements IScoreService {
-
   private final ScoreRepository scoreRepository;
-  private final IUserService userService;
-  private final IRaceService raceService;
+  private final UserRepository userRepository;
+  private final RaceRepository raceRepository;
 
   @Override
   public Score addScore(AddScoreDto addScoreDto) {
     try {
       Score score = new Score();
-      score.setUser(userService.getUserById(addScoreDto.getUserId()));
-      score.setRace(raceService.getRaceById(addScoreDto.getRaceId()));
+      Race playedRace = raceRepository.findById(addScoreDto.getRaceId())
+          .orElseThrow(() -> new ResourceNotFoundExceptions("Race not found"));
+      score.setUser(userRepository.findById(addScoreDto.getUserId())
+          .orElseThrow(() -> new ResourceNotFoundExceptions("User not found")));
+      score.setRace(playedRace);
       score.setValue(0);
       return scoreRepository.save(score);
     } catch (ResourceNotFoundExceptions e) {
@@ -36,8 +39,12 @@ public class ScoreService implements IScoreService {
   @Override
   public Score updateScore(AddScoreDto updateScoreDto, Long scoreId) {
     Score scoreToUpdate = getScoreById(scoreId);
-    scoreToUpdate.setValue(updateScoreDto.getValue());
-    scoreToUpdate.setUser(userService.getUserById(updateScoreDto.getUserId()));
+    Race playedRace = raceRepository.findById(updateScoreDto.getRaceId())
+        .orElseThrow(() -> new ResourceNotFoundExceptions("Race not found"));
+    int scoreValue = playedRace.getRacers().size() - updateScoreDto.getValue() + 1;
+    scoreToUpdate.setValue(scoreValue);
+    scoreToUpdate.setUser(userRepository.findById(updateScoreDto.getUserId())
+        .orElseThrow(() -> new ResourceNotFoundExceptions("User not found")));
     return scoreRepository.save(scoreToUpdate);
   }
 

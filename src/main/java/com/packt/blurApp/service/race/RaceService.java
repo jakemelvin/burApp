@@ -3,17 +3,16 @@ package com.packt.blurApp.service.race;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-import com.packt.blurApp.dto.RaceParameters.AddRaceParametersDto;
 import com.packt.blurApp.dto.User.RacePlayersDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Party;
 import com.packt.blurApp.model.Race;
 import com.packt.blurApp.model.RaceParameters;
 import com.packt.blurApp.model.User;
+import com.packt.blurApp.repository.RaceParametersRepository;
 import com.packt.blurApp.repository.RaceRepository;
 import com.packt.blurApp.repository.UserRepository;
 import com.packt.blurApp.service.party.IPartyService;
-import com.packt.blurApp.service.raceParameters.IRaceParametersService;
 import com.packt.blurApp.service.user.IUserService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,9 +22,9 @@ import lombok.RequiredArgsConstructor;
 public class RaceService implements IRaceService {
   private final RaceRepository raceRepository;
   private final IPartyService partyService;
-  private final IRaceParametersService raceParametersService;
   private final IUserService userService;
   private final UserRepository userRepository;
+  private final RaceParametersRepository raceParametersRepository;
 
   @Override
   public Race getRaceById(Long id) {
@@ -33,19 +32,17 @@ public class RaceService implements IRaceService {
   }
 
   @Override
-  public Race createRace(Long partyId, List<AddRaceParametersDto> raceParametersDtos) {
+  public Race createRace(Long partyId) {
     Race createdRace = new Race();
     Party party = partyService.getPartyById(partyId);
     createdRace.setParty(party);
-    raceParametersDtos.forEach(parameter -> {
-      RaceParameters raceParam = raceParametersService.getRaceParameterById(parameter.getId());
-      if (raceParam != null) {
-        raceParam.setIsChecked(parameter.getIsChecked());
-        if (raceParam.getIsChecked()) {
-          boolean randomBoolean = Math.random() < 0.5;
-          raceParam.setIsActive(randomBoolean);
-          createdRace.getRaceParameters().add(raceParam);
-        }
+    List<RaceParameters> raceParameters = raceParametersRepository.findAll();
+    raceParameters.forEach(parameter -> {
+      if (parameter != null) {
+        boolean randomBoolean = Math.random() < 0.5;
+        parameter.setIsActive(randomBoolean);
+        createdRace.getRaceParameters().add(parameter);
+
       }
     });
     return raceRepository.save(createdRace);
