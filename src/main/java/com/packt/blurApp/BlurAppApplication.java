@@ -9,11 +9,12 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootApplication
 public class BlurAppApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(BlurAppApplication.class, args);
-	}
-@GetMapping("/")
-	public String SayHello() {
-		return "Hello World";
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(BlurAppApplication.class, args);
+  }
+
+  @GetMapping("/")
+  public String SayHello() {
+    return "Hello World";
+  }
 }
