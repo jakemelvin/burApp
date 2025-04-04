@@ -1,10 +1,13 @@
 package com.packt.blurApp.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -24,8 +27,9 @@ public class Party {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-  private LocalDate datePlayed;
-  @OneToMany(mappedBy = "party")
+  private LocalDateTime datePlayed;
+  @OneToMany(mappedBy = "party", cascade = { CascadeType.ALL }, orphanRemoval = true)
+  @OnDelete(action = OnDeleteAction.CASCADE)
   private Set<Race> racesPlayed = new HashSet<>();
 
   public void addRace(Race race) {
@@ -39,6 +43,6 @@ public class Party {
   }
 
   public void setDateToNow() {
-    this.datePlayed = LocalDate.now();
+    this.datePlayed = LocalDateTime.now();
   }
 }

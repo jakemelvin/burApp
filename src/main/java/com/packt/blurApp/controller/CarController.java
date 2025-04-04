@@ -33,7 +33,7 @@ public class CarController {
   }
 
   // Mode 2 : Voiture aléatoire par joueur (doublons possibles)
-  @GetMapping("/individual-attribution")
+  @PostMapping("/individual-attribution")
   public ResponseEntity<ApiResponse> assignIndividualCar(@RequestBody List<String> Users) {
 
     try {

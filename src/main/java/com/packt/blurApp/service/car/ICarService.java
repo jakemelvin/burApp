@@ -35,9 +35,10 @@ public class ICarService implements CarService {
 
       for (String user : Users) {
         Attribution userAttribution = new Attribution();
+        Car randomCar = cars.get(random.nextInt(cars.size()));
         userAttribution.setId(cars.get(random.nextInt(cars.size())).getId());
-        userAttribution.setImageUrl(cars.get(random.nextInt(cars.size())).getImageUrl());
-        userAttribution.setName(cars.get(random.nextInt(cars.size())).getName());
+        userAttribution.setImageUrl(randomCar.getImageUrl());
+        userAttribution.setName(randomCar.getName());
         userAttribution.setUserName(user);
         attributionList.add(userAttribution);
       }

@@ -1,5 +1,6 @@
 package com.packt.blurApp.dto.Race;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 public class RaceResponseDto {
   private Long id;
   private PartyResponseDto party;
+  private LocalDateTime createdAt;
   private Set<ScoreResponseDto> scores = new HashSet<>();
   private Set<UserResponseDto> racers = new HashSet<>();
   private Set<RaceParameters> raceParameters = new HashSet<>();

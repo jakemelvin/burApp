@@ -1,6 +1,6 @@
 package com.packt.blurApp.dto.Party;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,6 +15,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PartyGetResponseDto {
   private Long id;
-  private LocalDate datePlayed;
+  private LocalDateTime datePlayed;
   private Set<RaceResponseDto> racesPlayed = new HashSet<>();
 }

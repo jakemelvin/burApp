@@ -1,5 +1,6 @@
 package com.packt.blurApp.service.race;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class RaceService implements IRaceService {
 
       }
     });
+    createdRace.setCreatedAt(LocalDateTime.now());
     return raceRepository.save(createdRace);
   }
 

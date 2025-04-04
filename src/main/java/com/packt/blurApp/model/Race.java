@@ -1,10 +1,14 @@
 package com.packt.blurApp.model;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,12 +31,13 @@ public class Race {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-  @OneToMany(mappedBy = "race")
+  private LocalDateTime createdAt;
+  @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
   private Set<Score> scores = new HashSet<>();
   @ManyToMany(mappedBy = "races")
   private Set<User> racers = new HashSet<>();
-  @ManyToOne
-  @JoinColumn(name = "party_id")
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "party_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
   private Party party;
   @ManyToMany
   @JoinTable(name = "race_race_parameters", joinColumns = @JoinColumn(name = "race_id"), inverseJoinColumns = @JoinColumn(name = "race_parameters_id"))
