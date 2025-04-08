@@ -3,6 +3,7 @@ package com.packt.blurApp.service.race;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.packt.blurApp.repository.AttributionRepository;
 import org.springframework.stereotype.Service;
 import com.packt.blurApp.dto.User.RacePlayersDto;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
@@ -26,6 +27,7 @@ public class RaceService implements IRaceService {
   private final IUserService userService;
   private final UserRepository userRepository;
   private final RaceParametersRepository raceParametersRepository;
+  private final AttributionRepository attributionRepository;
 
   @Override
   public Race getRaceById(Long id) {

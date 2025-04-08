@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface CardService {
-    Card choisirCarteAleatoire();
+    Card choisirCarteAleatoire(long raceId);
     List<Card> getAllCards();
     Map<String, String> toCarteDto(Card card);
     List<Map<String, String>> toCarteDtoList(List<Card> cards);
