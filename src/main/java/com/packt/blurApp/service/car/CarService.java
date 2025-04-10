@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Set;
 
 public interface CarService {
-  Car assignRandomCar();
+  Car assignRandomCar(long raceId);
 
-  Set<Attribution> assignCarsPerUser(List<String> Users);
+  Set<Attribution> assignCarsPerUser(List<String> Users, long raceId);
 
   List<Car> getAllCars();
 }

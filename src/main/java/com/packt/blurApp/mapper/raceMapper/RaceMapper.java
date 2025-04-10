@@ -17,6 +17,9 @@ public class RaceMapper {
     dto.setParty(PartyMapper.toPartyResponseDto(race.getParty()));
     dto.setRaceParameters(race.getRaceParameters());
     dto.setCreatedAt(race.getCreatedAt());
+    dto.setCar(race.getCar());
+    dto.setAttributions(race.getAttributions());
+    dto.setCard(race.getCard());
     race.getRacers().forEach(racer -> {
       dto.getRacers().add(UserResponseMapper.toUserResponseDto(racer));
     });

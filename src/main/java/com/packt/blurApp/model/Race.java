@@ -4,19 +4,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.ConstraintMode;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,6 +30,17 @@ public class Race {
   @ManyToMany
   @JoinTable(name = "race_race_parameters", joinColumns = @JoinColumn(name = "race_id"), inverseJoinColumns = @JoinColumn(name = "race_parameters_id"))
   private Set<RaceParameters> raceParameters = new HashSet<>();
+
+  @OneToMany(mappedBy = "race")
+  private Set<Attribution> attributions = new HashSet<>();
+
+  @OneToOne
+  @JoinColumn(name = "card_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+  private Card card;
+
+  @OneToOne
+  @JoinColumn(name = "car_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+  private Car car;
 
   public void addRaceParameter(RaceParameters raceParameter) {
     raceParameters.add(raceParameter);

@@ -1,7 +1,9 @@
 package com.packt.blurApp.service.card;
 
 import com.packt.blurApp.model.Card;
+import com.packt.blurApp.model.Race;
 import com.packt.blurApp.repository.CardRepository;
+import com.packt.blurApp.repository.RaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,14 +16,21 @@ public class ICardService implements CardService {
 
 
     private final CardRepository cardRepository;
+    private final RaceRepository raceRepository;
 
-    public Card choisirCarteAleatoire() {
+    public Card choisirCarteAleatoire(long raceId) {
         List<Card> cards = cardRepository.findAll();
         if (cards.isEmpty()) {
             throw new IllegalStateException("Aucune carte disponible.");
         }
         Random random = new Random();
-        return cards.get(random.nextInt(cards.size()));
+
+        Card card = cards.get(random.nextInt(cards.size()));
+
+        Race race = raceRepository.findById(raceId).orElseThrow(() -> new RuntimeException("Race not found"));
+        race.setCard(card);
+        raceRepository.save(race);
+        return card;
     }
 
     //Lister toutes les cartes disponibles

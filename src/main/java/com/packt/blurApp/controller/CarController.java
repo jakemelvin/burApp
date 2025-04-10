@@ -26,18 +26,18 @@ public class CarController {
   }
 
   // Mode 1 : Même voiture pour tous les joueurs
-  @GetMapping("/global-attribution")
-  public ResponseEntity<ApiResponse> assignGlobalCar() {
-    Car car = carService.assignRandomCar();
+  @GetMapping("/global-attribution/{raceId}")
+  public ResponseEntity<ApiResponse> assignGlobalCar(@PathVariable long raceId) {
+    Car car = carService.assignRandomCar(raceId);
     return ResponseEntity.ok(new ApiResponse("Global car attributed", car));
   }
 
   // Mode 2 : Voiture aléatoire par joueur (doublons possibles)
-  @PostMapping("/individual-attribution")
-  public ResponseEntity<ApiResponse> assignIndividualCar(@RequestBody List<String> Users) {
+  @PostMapping("/individual-attribution/{raceId}")
+  public ResponseEntity<ApiResponse> assignIndividualCar(@RequestBody List<String> Users, @PathVariable long raceId) {
 
     try {
-      Set<Attribution> cars = carService.assignCarsPerUser(Users);
+      Set<Attribution> cars = carService.assignCarsPerUser(Users, raceId);
       return ResponseEntity.ok(new ApiResponse("Individual car attributed", cars));
     } catch (ResourceNotFoundExceptions e) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));

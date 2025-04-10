@@ -7,6 +7,9 @@ import java.util.Set;
 import com.packt.blurApp.dto.Party.PartyResponseDto;
 import com.packt.blurApp.dto.Score.ScoreResponseDto;
 import com.packt.blurApp.dto.User.UserResponseDto;
+import com.packt.blurApp.model.Attribution;
+import com.packt.blurApp.model.Car;
+import com.packt.blurApp.model.Card;
 import com.packt.blurApp.model.RaceParameters;
 
 import lombok.AllArgsConstructor;
@@ -23,4 +26,7 @@ public class RaceResponseDto {
   private Set<ScoreResponseDto> scores = new HashSet<>();
   private Set<UserResponseDto> racers = new HashSet<>();
   private Set<RaceParameters> raceParameters = new HashSet<>();
+  private Car car;
+  private Card card;
+  private Set<Attribution> attributions = new HashSet<>();
 }
