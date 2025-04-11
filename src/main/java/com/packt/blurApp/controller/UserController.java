@@ -2,6 +2,7 @@ package com.packt.blurApp.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,16 +48,16 @@ public class UserController {
     }
   }
 
-  // @DeleteMapping("/delete")
-  // public ResponseEntity<ApiResponse> deleteUser(@RequestParam Long userId) {
-  //   try {
-  //     userService.deleteUserById(userId);
-  //     return ResponseEntity.ok(new ApiResponse("User deleted successfully", null));
+  @DeleteMapping("/delete")
+  public ResponseEntity<ApiResponse> deleteUser(@RequestParam Long userId) {
+    try {
+      userService.deleteUserById(userId);
+      return ResponseEntity.ok(new ApiResponse("User deleted successfully", null));
 
-  //   } catch (Exception e) {
-  //     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
-  //   }
-  // }
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    }
+  }
 
   @PostMapping("/log-in")
   public ResponseEntity<ApiResponse> signInWithUserNameAndPassword(@RequestBody UserSignInDto userLoginCredentials) {

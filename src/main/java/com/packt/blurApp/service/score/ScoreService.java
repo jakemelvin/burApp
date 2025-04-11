@@ -28,9 +28,8 @@ public class ScoreService implements IScoreService {
           .orElseThrow(() -> new ResourceNotFoundExceptions("Race not found"));
       score.setUser(userRepository.findById(addScoreDto.getUserId())
           .orElseThrow(() -> new ResourceNotFoundExceptions("User not found")));
-      int scoreValue = playedRace.getRacers().size() - addScoreDto.getValue() + 1;
       score.setRace(playedRace);
-      score.setValue(scoreValue);
+      score.setValue(addScoreDto.getValue());
       return scoreRepository.save(score);
     } catch (ResourceNotFoundExceptions e) {
       throw new ResourceNotFoundExceptions(e.getMessage());
