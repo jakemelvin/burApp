@@ -23,10 +23,29 @@ public class ICardService implements CardService {
         if (cards.isEmpty()) {
             throw new IllegalStateException("Aucune carte disponible.");
         }
+        // Récupérer les cartes déjà attribuées aux courses actives
+        List<Race> allRaces = raceRepository.findAll();
+        Set<Long> usedCardIds = new HashSet<>();
+        for (Race r : allRaces) {
+            if (r.getCard() != null) {
+                usedCardIds.add(r.getCard().getId());
+            }
+        }
+        // Filtrer les cartes non utilisées
+        List<Card> availableCards = new ArrayList<>();
+        for (Card c : cards) {
+            if (!usedCardIds.contains(c.getId())) {
+                availableCards.add(c);
+            }
+        }
         Random random = new Random();
-
-        Card card = cards.get(random.nextInt(cards.size()));
-
+        Card card;
+        if (!availableCards.isEmpty()) {
+            card = availableCards.get(random.nextInt(availableCards.size()));
+        } else {
+            // Toutes les cartes sont déjà utilisées, on autorise les doublons
+            card = cards.get(random.nextInt(cards.size()));
+        }
         Race race = raceRepository.findById(raceId).orElseThrow(() -> new RuntimeException("Race not found"));
         race.setCard(card);
         raceRepository.save(race);
