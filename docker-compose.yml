@@ -1,0 +1,17 @@
+services:
+  blur-app:
+    image: blur-app
+    build: .
+    env_file: .env
+    environment:
+      - PORT=${BACKEND_PORT}
+    ports:
+      - "8888:${BACKEND_PORT:-8888}"
+    networks:
+      - default
+
+
+networks:
+  default:
+    driver: bridge
+    name: blur-network
