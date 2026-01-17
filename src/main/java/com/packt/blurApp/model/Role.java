@@ -47,7 +47,7 @@ public class Role {
     public static Role createGreatAdminRole() {
         return Role.builder()
                 .name(RoleType.GREAT_ADMIN)
-                .description("Great Administrator with all user management permissions")
+                .description("Great Administrator with all permissions")
                 .permissions(Set.of(
                     PermissionType.ALL_PERMISSIONS,
                     PermissionType.CREATE_USER,
@@ -55,9 +55,19 @@ public class Role {
                     PermissionType.DELETE_USER,
                     PermissionType.VIEW_ALL_USERS,
                     PermissionType.ASSIGN_ROLES,
+                    PermissionType.CREATE_PARTY,
+                    PermissionType.MANAGE_PARTY,
+                    PermissionType.DELETE_PARTY,
                     PermissionType.VIEW_PARTY,
+                    PermissionType.CREATE_RACE,
+                    PermissionType.START_RACE,
+                    PermissionType.DELETE_RACE,
                     PermissionType.VIEW_RACE,
+                    PermissionType.SUBMIT_SCORE,
                     PermissionType.VIEW_SCORE,
+                    PermissionType.EDIT_SCORE,
+                    PermissionType.VIEW_CARS,
+                    PermissionType.VIEW_MAPS,
                     PermissionType.VIEW_STATISTICS,
                     PermissionType.VIEW_HISTORY
                 ))
