@@ -1,8 +1,9 @@
 package com.packt.blurApp.exceptions;
 
-public class ResourceNotFoundExceptions extends RuntimeException {
-  public ResourceNotFoundExceptions(String message) {
-    super(message);
-  }
+import org.springframework.http.HttpStatus;
 
+public class ResourceNotFoundExceptions extends ApiException {
+    public ResourceNotFoundExceptions(String message) {
+        super(message, HttpStatus.NOT_FOUND);
+    }
 }

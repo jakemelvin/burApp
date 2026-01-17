@@ -4,14 +4,45 @@ services:
     build: .
     env_file: .env
     environment:
-      - PORT=${BACKEND_PORT}
+      - BACKEND_PORT=${BACKEND_PORT:-8080}
+      - DATABASE_URL=${DATABASE_URL:-jdbc:postgresql://blur-db:5432/blurapp}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - JWT_SECRET=${JWT_SECRET:-5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-604800000}
     ports:
-      - "8888:${BACKEND_PORT:-8888}"
+      - "${BACKEND_PORT:-8080}:${BACKEND_PORT:-8080}"
+    depends_on:
+      blur-db:
+        condition: service_healthy
     networks:
-      - default
+      - blur-network
+    restart: unless-stopped
 
+  blur-db:
+    image: postgres:17-alpine
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-blurapp}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - blur_db_data:/var/lib/postgresql/data
+    networks:
+      - blur-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 networks:
-  default:
+  blur-network:
     driver: bridge
-    name: blur-network
+
+volumes:
+  blur_db_data:

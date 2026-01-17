@@ -1,78 +1,112 @@
 package com.packt.blurApp.controller;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
-import com.packt.blurApp.dto.User.RacePlayersDto;
-import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.mapper.raceMapper.RaceMapper;
+import com.packt.blurApp.model.Race;
+import com.packt.blurApp.model.enums.AttributionType;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.race.IRaceService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("${api.prefix}/races")
+@RequiredArgsConstructor
 public class RaceController {
-  private final IRaceService raceService;
+    private final IRaceService raceService;
 
-  @GetMapping
-  public ResponseEntity<ApiResponse> getAllRaces() {
-    return ResponseEntity
-        .ok(new ApiResponse("Races fetched successfully", RaceMapper.toRaceResponseDtoList(raceService.getAllRaces())));
-  }
-
-  @GetMapping("/get-by-id")
-  public ResponseEntity<ApiResponse> getRaceById(@RequestParam Long raceId) {
-    try {
-      return ResponseEntity.ok(
-          new ApiResponse("Race fetched successfully", RaceMapper.toRaceResponseDto(raceService.getRaceById(raceId))));
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('VIEW_RACE')")
+    public ResponseEntity<ApiResponse<?>> getRaceById(@PathVariable Long id) {
+        log.info("GET ${api.prefix}/races/{} - Get race by ID", id);
+        Race race = raceService.getRaceById(id);
+        return ResponseEntity.ok(ApiResponse.success("Race fetched successfully",
+                RaceMapper.toRaceResponseDto(race)));
     }
-  }
 
-  @PostMapping("/create-race")
-  public ResponseEntity<ApiResponse> createRace(@RequestParam Long partyId) {
-    try {
-      return ResponseEntity
-          .ok(new ApiResponse("Race created Successfully",
-              RaceMapper.toRaceResponseDto(raceService.createRace(partyId))));
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping
+    @PreAuthorize("hasAuthority('VIEW_RACE')")
+    public ResponseEntity<ApiResponse<?>> getAllRaces() {
+        log.info("GET ${api.prefix}/races - Get all races");
+        return ResponseEntity.ok(ApiResponse.success("Races fetched successfully",
+                RaceMapper.toRaceResponseDtoList(raceService.getAllRaces())));
     }
-  }
 
-  @PutMapping("/update-race")
-  public ResponseEntity<ApiResponse> updateRacePlayers(@RequestParam Long raceId,
-      @RequestBody List<RacePlayersDto> racePlayers) {
-    try {
-      return ResponseEntity
-          .ok(new ApiResponse("Race updated Successfully",
-              RaceMapper.toRaceResponseDto(raceService.updateRacePlayers(racePlayers, raceId))));
-
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping("/party/{partyId}")
+    @PreAuthorize("hasAuthority('VIEW_RACE')")
+    public ResponseEntity<ApiResponse<?>> getRacesByPartyId(@PathVariable Long partyId) {
+        log.info("GET ${api.prefix}/races/party/{} - Get races by party ID", partyId);
+        return ResponseEntity.ok(ApiResponse.success("Races fetched successfully",
+                RaceMapper.toRaceResponseDtoList(raceService.getRacesByPartyId(partyId))));
     }
-  }
 
-  @GetMapping("/get-by-party-id")
-  public ResponseEntity<ApiResponse> getRaceByPartyId(@RequestParam Long partyId) {
-    try {
-      return ResponseEntity.ok(new ApiResponse("Race fetched successfully",
-          RaceMapper.toRaceResponseDtoList(raceService.getRaceByPartyId(partyId))));
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasAuthority('VIEW_RACE')")
+    public ResponseEntity<ApiResponse<?>> getRacesByStatus(@PathVariable String status) {
+        log.info("GET ${api.prefix}/races/status/{} - Get races by status", status);
+        return ResponseEntity.ok(ApiResponse.success("Races fetched successfully",
+                RaceMapper.toRaceResponseDtoList(raceService.getRacesByStatus(status))));
     }
-  }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_RACE')")
+    public ResponseEntity<ApiResponse<?>> createRace(
+            @RequestParam Long partyId,
+            @RequestParam(defaultValue = "PER_USER") String attributionType) {
+        log.info("POST ${api.prefix}/races - Create race for party {} with attribution {}", partyId, attributionType);
+        AttributionType type = AttributionType.valueOf(attributionType.toUpperCase());
+        Race race = raceService.createRace(partyId, type);
+        return ResponseEntity.ok(ApiResponse.success("Race created successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @PostMapping("/{raceId}/participants/{userId}")
+    @PreAuthorize("hasAuthority('JOIN_RACE')")
+    public ResponseEntity<ApiResponse<?>> addParticipant(@PathVariable Long raceId, @PathVariable Long userId) {
+        log.info("POST ${api.prefix}/races/{}/participants/{} - Add participant", raceId, userId);
+        Race race = raceService.addParticipant(raceId, userId);
+        return ResponseEntity.ok(ApiResponse.success("Participant added successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @DeleteMapping("/{raceId}/participants/{userId}")
+    @PreAuthorize("hasAuthority('LEAVE_RACE')")
+    public ResponseEntity<ApiResponse<?>> removeParticipant(@PathVariable Long raceId, @PathVariable Long userId) {
+        log.info("DELETE ${api.prefix}/races/{}/participants/{} - Remove participant", raceId, userId);
+        Race race = raceService.removeParticipant(raceId, userId);
+        return ResponseEntity.ok(ApiResponse.success("Participant removed successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @PostMapping("/{raceId}/start")
+    @PreAuthorize("hasAuthority('START_RACE')")
+    public ResponseEntity<ApiResponse<?>> startRace(@PathVariable Long raceId) {
+        log.info("POST ${api.prefix}/races/{}/start - Start race", raceId);
+        Race race = raceService.startRace(raceId);
+        return ResponseEntity.ok(ApiResponse.success("Race started successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @PostMapping("/{raceId}/complete")
+    @PreAuthorize("hasAuthority('START_RACE')")
+    public ResponseEntity<ApiResponse<?>> completeRace(@PathVariable Long raceId) {
+        log.info("POST ${api.prefix}/races/{}/complete - Complete race", raceId);
+        Race race = raceService.completeRace(raceId);
+        return ResponseEntity.ok(ApiResponse.success("Race completed successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @PostMapping("/{raceId}/cancel")
+    @PreAuthorize("hasAuthority('DELETE_RACE')")
+    public ResponseEntity<ApiResponse<?>> cancelRace(@PathVariable Long raceId) {
+        log.info("POST ${api.prefix}/races/{}/cancel - Cancel race", raceId);
+        Race race = raceService.cancelRace(raceId);
+        return ResponseEntity.ok(ApiResponse.success("Race cancelled successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
 }

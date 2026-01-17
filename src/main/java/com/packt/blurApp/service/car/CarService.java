@@ -1,15 +1,26 @@
 package com.packt.blurApp.service.car;
 
-import com.packt.blurApp.model.Attribution;
+import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Car;
+import com.packt.blurApp.repository.CarRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
-public interface CarService {
-  Car assignRandomCar(long raceId);
+@Service
+@RequiredArgsConstructor
+public class CarService implements ICarService {
+    private final CarRepository carRepository;
 
-  Set<Attribution> assignCarsPerUser(List<String> Users, long raceId);
+    @Override
+    public List<Car> getAllCars() {
+        return carRepository.findAll();
+    }
 
-  List<Car> getAllCars();
+    @Override
+    public Car getCarById(Long id) {
+        return carRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundExceptions("Car not found with ID: " + id));
+    }
 }

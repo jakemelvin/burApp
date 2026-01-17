@@ -1,72 +1,98 @@
 package com.packt.blurApp.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import com.packt.blurApp.dto.User.AddUserDto;
-import com.packt.blurApp.dto.User.UserSignInDto;
-import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
+import com.packt.blurApp.dto.User.UserUpdateDto;
 import com.packt.blurApp.mapper.userMapper.UserResponseMapper;
+import com.packt.blurApp.model.User;
+import com.packt.blurApp.model.enums.RoleType;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.user.IUserService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("${api.prefix}/users")
 @RequiredArgsConstructor
 public class UserController {
-  private final IUserService userService;
+    private final IUserService userService;
 
-  @GetMapping
-  public ResponseEntity<ApiResponse> getAllUsers() {
-    return ResponseEntity.ok(new ApiResponse("Users fetched successfully",
-        UserResponseMapper.toUserGlobalResponseDtoList(userService.getAllUsers())));
-  }
-
-  @PostMapping("/create")
-  public ResponseEntity<ApiResponse> createUser(@RequestBody AddUserDto userDtos) {
-    return ResponseEntity.ok(new ApiResponse("User created successfully",
-        UserResponseMapper.toUserSignInResponseDto(userService.createUser(userDtos))));
-  }
-
-  @GetMapping("/get-by-id")
-  public ResponseEntity<ApiResponse> getUserById(@RequestParam Long userId) {
-    try {
-      return ResponseEntity.ok(new ApiResponse("User fetched successfully",
-          UserResponseMapper.toUserGlobalResponseDto(userService.getUserById(userId))));
-
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping
+    @PreAuthorize("hasAuthority('VIEW_ALL_USERS')")
+    public ResponseEntity<ApiResponse<?>> getAllUsers() {
+        log.info("GET ${api.prefix}/users - Fetch all users");
+        return ResponseEntity.ok(ApiResponse.success("Users fetched successfully",
+                UserResponseMapper.toUserGlobalResponseDtoList(userService.getAllUsers())));
     }
-  }
 
-  @DeleteMapping("/delete")
-  public ResponseEntity<ApiResponse> deleteUser(@RequestParam Long userId) {
-    try {
-      userService.deleteUserById(userId);
-      return ResponseEntity.ok(new ApiResponse("User deleted successfully", null));
-
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_USER')")
+    public ResponseEntity<ApiResponse<?>> createUser(@Valid @RequestBody AddUserDto userDto) {
+        log.info("POST ${api.prefix}/users - Create user: {}", userDto.getUserName());
+        User createdUser = userService.createUser(userDto);
+        return ResponseEntity.ok(ApiResponse.success("User created successfully",
+                UserResponseMapper.toUserGlobalResponseDto(createdUser)));
     }
-  }
 
-  @PostMapping("/log-in")
-  public ResponseEntity<ApiResponse> signInWithUserNameAndPassword(@RequestBody UserSignInDto userLoginCredentials) {
-    try {
-      return ResponseEntity
-          .ok(new ApiResponse("User Login successful", UserResponseMapper.toUserSignInResponseDto(userService
-              .findUserByNameAndPassword(userLoginCredentials.getUserName(), userLoginCredentials.getPassword()))));
-    } catch (ResourceNotFoundExceptions e) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+    @GetMapping("/{userId}")
+    @PreAuthorize("hasAuthority('VIEW_ALL_USERS') or @userService.getCurrentUser().getId() == #userId")
+    public ResponseEntity<ApiResponse<?>> getUserById(@PathVariable Long userId) {
+        log.info("GET ${api.prefix}/users/{} - Fetch user by ID", userId);
+        return ResponseEntity.ok(ApiResponse.success("User fetched successfully",
+                UserResponseMapper.toUserGlobalResponseDto(userService.getUserById(userId))));
     }
-  }
+
+    @PutMapping("/{userId}")
+    @PreAuthorize("hasAuthority('UPDATE_USER')")
+    public ResponseEntity<ApiResponse<?>> updateUser(@PathVariable Long userId, 
+                                                      @Valid @RequestBody UserUpdateDto updateDto) {
+        log.info("PUT ${api.prefix}/users/{} - Update user", userId);
+        User updatedUser = userService.updateUser(userId, updateDto);
+        return ResponseEntity.ok(ApiResponse.success("User updated successfully",
+                UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
+    }
+
+    @PutMapping("/{userId}/profile")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_PROFILE') and @userService.getCurrentUser().getId() == #userId")
+    public ResponseEntity<ApiResponse<?>> updateUserProfile(@PathVariable Long userId,
+                                                             @Valid @RequestBody UserUpdateDto updateDto) {
+        log.info("PUT ${api.prefix}/users/{}/profile - Update user profile", userId);
+        User updatedUser = userService.updateUserProfile(userId, updateDto);
+        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully",
+                UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
+    }
+
+    @PutMapping("/{userId}/role")
+    @PreAuthorize("hasAuthority('ASSIGN_ROLES')")
+    public ResponseEntity<ApiResponse<?>> assignRole(@PathVariable Long userId,
+                                                      @RequestParam String role) {
+        log.info("PUT ${api.prefix}/users/{}/role - Assign role: {}", userId, role);
+        RoleType roleType = RoleType.valueOf(role.toUpperCase());
+        User updatedUser = userService.assignRole(userId, roleType);
+        return ResponseEntity.ok(ApiResponse.success("Role assigned successfully",
+                UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
+    }
+
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('DELETE_USER')")
+    public ResponseEntity<ApiResponse<?>> deleteUser(@PathVariable Long userId) {
+        log.info("DELETE ${api.prefix}/users/{} - Delete user", userId);
+        userService.deleteUserById(userId);
+        return ResponseEntity.ok(ApiResponse.success("User deleted successfully"));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAuthority('VIEW_OWN_PROFILE')")
+    public ResponseEntity<ApiResponse<?>> getCurrentUser() {
+        log.info("GET ${api.prefix}/users/me - Get current user");
+        User currentUser = userService.getCurrentUser();
+        return ResponseEntity.ok(ApiResponse.success("Current user fetched successfully",
+                UserResponseMapper.toUserGlobalResponseDto(currentUser)));
+    }
 }
