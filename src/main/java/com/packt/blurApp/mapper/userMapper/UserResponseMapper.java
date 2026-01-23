@@ -9,6 +9,7 @@ import com.packt.blurApp.dto.User.UserResponseDto;
 import com.packt.blurApp.dto.User.UserSignInResponseDto;
 import com.packt.blurApp.mapper.raceMapper.RaceMapper;
 import com.packt.blurApp.model.User;
+import org.hibernate.Hibernate;
 
 public class UserResponseMapper {
     
@@ -44,7 +45,8 @@ public class UserResponseMapper {
                 .map(Enum::name)
                 .collect(Collectors.toSet())
             : null);
-        if (user.getRaces() != null) {
+        // Map races only if the collection is initialized to avoid LazyInitializationException
+        if (user.getRaces() != null && Hibernate.isInitialized(user.getRaces())) {
             user.getRaces().forEach(race -> {
                 dto.getRaces().add(RaceMapper.toRaceResponseDto(race));
             });
