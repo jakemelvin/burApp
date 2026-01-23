@@ -4,7 +4,7 @@ services:
     build: .
     env_file: .env
     environment:
-      - BACKEND_PORT=${BACKEND_PORT:-8080}
+      - PORT=${BACKEND_PORT:-8080}
       - DATABASE_URL=${DATABASE_URL:-jdbc:postgresql://blur-db:5432/blurapp}
       - DB_USERNAME=${DB_USERNAME:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
@@ -12,10 +12,10 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
       - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-604800000}
     ports:
-      - "${BACKEND_PORT:-8080}:${BACKEND_PORT:-8080}"
-    depends_on:
-      blur-db:
-        condition: service_healthy
+      - "8888:${BACKEND_PORT:-8080}"
+#    depends_on:
+#      blur-db:
+#        condition: service_healthy
     networks:
       - blur-network
     restart: unless-stopped

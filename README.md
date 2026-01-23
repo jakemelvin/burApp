@@ -53,18 +53,6 @@ DB_PASSWORD=YOUR_NEON_PASSWORD
 mvn spring-boot:run
 ```
 
-## Run with Docker using Neon
-
-```bash
-cd burApp
-cp env.template .env
-# edit DB_PASSWORD and JWT_SECRET
-
-docker compose -f docker-compose.remote-db.yml up -d --build
-```
-
-> On Windows Git Bash, prefer `docker compose` (not `docker-compose`) and avoid copy/pasting extra characters like `│`.
-
 ## Default bootstrap
 On first start, the backend creates:
 - Roles: GREAT_ADMIN, PARTY_MANAGER, RACER
