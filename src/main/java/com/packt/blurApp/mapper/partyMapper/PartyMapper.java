@@ -15,16 +15,16 @@ public class PartyMapper {
     public static PartyResponseDto toPartyResponseDto(Party party) {
         PartyResponseDto dto = new PartyResponseDto();
         dto.setId(party.getId());
-        dto.setDatePlayed(party.getPartyDate().atStartOfDay());
+        dto.setDatePlayed(party.getPartyDate() != null ? party.getPartyDate().atStartOfDay() : null);
         return dto;
     }
 
     public static PartyGetResponseDto toPartyGetResponseDto(Party party) {
         PartyGetResponseDto dto = new PartyGetResponseDto();
         dto.setId(party.getId());
-        dto.setDatePlayed(party.getPartyDate().atStartOfDay());
+        dto.setDatePlayed(party.getPartyDate() != null ? party.getPartyDate().atStartOfDay() : null);
         
-        if (party.getRaces() != null) {
+        if (party.getRaces() != null && org.hibernate.Hibernate.isInitialized(party.getRaces())) {
             Set<com.packt.blurApp.dto.Race.RaceResponseDto> raceDtos = party.getRaces().stream()
                 .map(RaceMapper::toRaceResponseDto)
                 .collect(Collectors.toSet());
