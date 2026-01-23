@@ -8,6 +8,7 @@ COPY mvnw pom.xml ./
 RUN ./mvnw dependency:resolve
 
 COPY src ./src
+RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
 # Étape de production
