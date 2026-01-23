@@ -32,6 +32,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final org.springframework.core.env.Environment env;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -62,16 +63,34 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:8080"
-        ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+
+        // Read comma-separated lists from environment or use defaults
+        String originsProp = env.getProperty("cors.allowed-origins", "http://localhost:3000,http://localhost:3001");
+        String methodsProp = env.getProperty("cors.allowed-methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+        String headersProp = env.getProperty("cors.allowed-headers", "*");
+        String exposedProp = env.getProperty("cors.exposed-headers", "Authorization,Content-Type");
+        boolean allowCredentials = Boolean.parseBoolean(env.getProperty("cors.allow-credentials", "true"));
+        long maxAge = Long.parseLong(env.getProperty("cors.max-age", "3600"));
+
+        List<String> origins = Arrays.stream(originsProp.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        List<String> methods = Arrays.stream(methodsProp.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        List<String> headers = Arrays.stream(headersProp.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        List<String> exposed = Arrays.stream(exposedProp.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+
+        // Support wildcard origins using allowedOriginPatterns
+        if (origins.contains("*")) {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            configuration.setAllowedOrigins(origins);
+        }
+        configuration.setAllowedMethods(methods);
+        configuration.setAllowedHeaders(headers);
+        configuration.setExposedHeaders(exposed);
+        configuration.setAllowCredentials(allowCredentials);
+        configuration.setMaxAge(maxAge);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

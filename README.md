@@ -84,5 +84,12 @@ On first start, the backend creates:
   - `POST /api/v1/scores`
 
 ## Notes
-- CORS allows localhost:3000 by default.
+- CORS is configurable via environment variables in `.env`:
+  - `CORS_ALLOWED_ORIGINS` (comma-separated)
+  - `CORS_ALLOWED_METHODS`
+  - `CORS_ALLOWED_HEADERS`
+  - `CORS_EXPOSED_HEADERS`
+  - `CORS_ALLOW_CREDENTIALS`
+  - `CORS_MAX_AGE`
+- Defaults allow localhost:3000,3001. Override in your `.env` as needed.
 - All endpoints (except `/api/auth/**` and swagger/docs) require `Authorization: Bearer <token>`.
