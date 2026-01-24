@@ -34,7 +34,11 @@ public class AuthResponse {
         private Long id;
         private String username;
         private String email;
+        // Primary role kept for backward compatibility
         private String role;
+        // All roles assigned to the user
+        private java.util.List<String> roles;
+        // Union of all permissions from all roles
         private java.util.List<String> permissions;
     }
 }

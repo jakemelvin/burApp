@@ -62,6 +62,15 @@ public class AuthService {
 
             log.info("User '{}' logged in successfully", user.getUsername());
 
+            // Build roles and permissions (union)
+            var allRoles = user.getAllRoles();
+            var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+            var permissionsList = allRoles.stream()
+                    .flatMap(r -> r.getPermissions().stream())
+                    .map(PermissionType::name)
+                    .distinct()
+                    .collect(Collectors.toList());
+
             return AuthResponse.builder()
                     .success(true)
                     .message("Login successful")
@@ -73,10 +82,9 @@ public class AuthService {
                             .id(user.getId())
                             .username(user.getUsername())
                             .email(user.getEmail())
-                            .role(user.getRole().getName().name())
-                            .permissions(user.getRole().getPermissions().stream()
-                                    .map(PermissionType::name)
-                                    .collect(Collectors.toList()))
+                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                            .roles(rolesList)
+                            .permissions(permissionsList)
                             .build())
                     .build();
 
@@ -124,6 +132,14 @@ public class AuthService {
 
         log.info("User '{}' registered successfully with role '{}'", user.getUsername(), roleType);
 
+        var allRoles = user.getAllRoles();
+        var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+        var permissionsList = allRoles.stream()
+                .flatMap(r -> r.getPermissions().stream())
+                .map(PermissionType::name)
+                .distinct()
+                .collect(Collectors.toList());
+
         return AuthResponse.builder()
                 .success(true)
                 .message("Registration successful")
@@ -135,10 +151,9 @@ public class AuthService {
                         .id(user.getId())
                         .username(user.getUsername())
                         .email(user.getEmail())
-                        .role(user.getRole().getName().name())
-                        .permissions(user.getRole().getPermissions().stream()
-                                .map(PermissionType::name)
-                                .collect(Collectors.toList()))
+                        .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                        .roles(rolesList)
+                        .permissions(permissionsList)
                         .build())
                 .build();
     }
@@ -165,6 +180,14 @@ public class AuthService {
 
             log.info("Token refreshed successfully for user: {}", username);
 
+            var allRoles = user.getAllRoles();
+            var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+            var permissionsList = allRoles.stream()
+                    .flatMap(r -> r.getPermissions().stream())
+                    .map(PermissionType::name)
+                    .distinct()
+                    .collect(Collectors.toList());
+
             return AuthResponse.builder()
                     .success(true)
                     .message("Token refreshed successfully")
@@ -176,10 +199,9 @@ public class AuthService {
                             .id(user.getId())
                             .username(user.getUsername())
                             .email(user.getEmail())
-                            .role(user.getRole().getName().name())
-                            .permissions(user.getRole().getPermissions().stream()
-                                    .map(PermissionType::name)
-                                    .collect(Collectors.toList()))
+                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                            .roles(rolesList)
+                            .permissions(permissionsList)
                             .build())
                     .build();
 
