@@ -2,11 +2,13 @@ package com.packt.blurApp.dto.User;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -24,6 +26,10 @@ public class AddUserDto {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
     
-    @NotNull(message = "Role is required")
-    private String role; // RoleType as string: GREAT_ADMIN, PARTY_MANAGER, RACER
+    // Support for multiple roles
+    @NotEmpty(message = "At least one role is required")
+    private Set<String> roles; // RoleTypes as strings: GREAT_ADMIN, PARTY_MANAGER, RACER
+    
+    // Legacy single role field for backward compatibility
+    private String role;
 }

@@ -37,7 +37,7 @@ public class PartyService implements IPartyService {
         User currentUser = userService.getCurrentUser();
         
         // Check if party already exists for today
-        return partyRepository.findByPartyDateAndActiveTrue(today)
+        Party party = partyRepository.findByPartyDateAndActiveTrue(today)
                 .orElseGet(() -> {
                     log.info("No party exists for today. Creating new party by user: {}", currentUser.getUsername());
                     
@@ -57,26 +57,59 @@ public class PartyService implements IPartyService {
                     
                     return savedParty;
                 });
+        
+        // Initialize lazy collections to avoid LazyInitializationException
+        org.hibernate.Hibernate.initialize(party.getRaces());
+        org.hibernate.Hibernate.initialize(party.getMembers());
+        org.hibernate.Hibernate.initialize(party.getManagers());
+        
+        return party;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Party getPartyById(Long id) {
         log.debug("Fetching party by ID: {}", id);
-        return partyRepository.findById(id)
+        Party party = partyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Party not found with ID: " + id));
+        
+        // Initialize lazy collections to avoid LazyInitializationException
+        org.hibernate.Hibernate.initialize(party.getRaces());
+        org.hibernate.Hibernate.initialize(party.getMembers());
+        org.hibernate.Hibernate.initialize(party.getManagers());
+        
+        return party;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Party getPartyByDate(LocalDate date) {
         log.debug("Fetching party by date: {}", date);
-        return partyRepository.findByPartyDate(date)
+        Party party = partyRepository.findByPartyDate(date)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("No party found for date: " + date));
+        
+        // Initialize lazy collections to avoid LazyInitializationException
+        org.hibernate.Hibernate.initialize(party.getRaces());
+        org.hibernate.Hibernate.initialize(party.getMembers());
+        org.hibernate.Hibernate.initialize(party.getManagers());
+        
+        return party;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Party> getAllParties() {
         log.debug("Fetching all parties");
-        return partyRepository.findAll();
+        List<Party> parties = partyRepository.findAll();
+        
+        // Initialize lazy collections for each party
+        parties.forEach(party -> {
+            org.hibernate.Hibernate.initialize(party.getRaces());
+            org.hibernate.Hibernate.initialize(party.getMembers());
+            org.hibernate.Hibernate.initialize(party.getManagers());
+        });
+        
+        return parties;
     }
 
     @Override

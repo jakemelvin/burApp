@@ -18,6 +18,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.packt.blurApp.model.enums.RoleType;
+
 @Entity
 @Data
 @Builder
@@ -43,6 +45,18 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    // Support for multiple roles per user
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+    
+    // Legacy single role field - kept for backward compatibility during migration
+    // This will be deprecated and removed in future versions
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = true)
     private Role role;
@@ -103,11 +117,25 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<GrantedAuthority> authorities = new HashSet<>();
         
-        // Add role as authority
-        if (role != null) {
+        // Add authorities from multiple roles (new system)
+        if (roles != null && !roles.isEmpty()) {
+            for (Role r : roles) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + r.getName().name()));
+                
+                if (r.getPermissions() != null) {
+                    authorities.addAll(
+                        r.getPermissions().stream()
+                            .map(permission -> new SimpleGrantedAuthority(permission.name()))
+                            .collect(Collectors.toSet())
+                    );
+                }
+            }
+        }
+        
+        // Fallback to legacy single role for backward compatibility
+        if (authorities.isEmpty() && role != null) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName().name()));
             
-            // Add permissions as authorities
             if (role.getPermissions() != null) {
                 authorities.addAll(
                     role.getPermissions().stream()
@@ -118,6 +146,28 @@ public class User implements UserDetails {
         }
         
         return authorities;
+    }
+    
+    // Helper methods for multiple roles
+    public void addRole(Role role) {
+        this.roles.add(role);
+    }
+    
+    public void removeRole(Role role) {
+        this.roles.remove(role);
+    }
+    
+    public boolean hasRole(RoleType roleType) {
+        return roles.stream().anyMatch(r -> r.getName() == roleType) ||
+               (role != null && role.getName() == roleType);
+    }
+    
+    public Set<Role> getAllRoles() {
+        Set<Role> allRoles = new HashSet<>(roles);
+        if (role != null && allRoles.isEmpty()) {
+            allRoles.add(role);
+        }
+        return allRoles;
     }
 
     @Override

@@ -54,29 +54,43 @@ public class UserService implements IUserService {
             throw new ConflictException("Email already exists: " + addUserDto.getEmail());
         }
         
-        // Parse role
-        RoleType roleType;
-        try {
-            roleType = RoleType.valueOf(addUserDto.getRole().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid role: " + addUserDto.getRole());
-        }
-        
-        // Get role entity
-        Role role = roleRepository.findByName(roleType)
-                .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
-        
-        // Create user
+        // Create user first
         User newUser = User.builder()
                 .userName(addUserDto.getUserName())
                 .email(addUserDto.getEmail())
                 .password(passwordEncoder.encode(addUserDto.getPassword()))
-                .role(role)
                 .enabled(true)
                 .accountNonExpired(true)
                 .accountNonLocked(true)
                 .credentialsNonExpired(true)
                 .build();
+        
+        // Handle multiple roles
+        if (addUserDto.getRoles() != null && !addUserDto.getRoles().isEmpty()) {
+            for (String roleStr : addUserDto.getRoles()) {
+                try {
+                    RoleType roleType = RoleType.valueOf(roleStr.toUpperCase());
+                    Role role = roleRepository.findByName(roleType)
+                            .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                    newUser.addRole(role);
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException("Invalid role: " + roleStr);
+                }
+            }
+        } else if (addUserDto.getRole() != null) {
+            // Fallback to legacy single role
+            try {
+                RoleType roleType = RoleType.valueOf(addUserDto.getRole().toUpperCase());
+                Role role = roleRepository.findByName(roleType)
+                        .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                newUser.addRole(role);
+                newUser.setRole(role); // Keep legacy field for backward compatibility
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid role: " + addUserDto.getRole());
+            }
+        } else {
+            throw new BadRequestException("At least one role is required");
+        }
         
         User savedUser = userRepository.save(newUser);
         log.info("User created successfully: {}", savedUser.getUsername());
@@ -107,8 +121,40 @@ public class UserService implements IUserService {
         }
         
         // Update password if provided
-        if (updateDto.getPassword() != null) {
+        if (updateDto.getPassword() != null && !updateDto.getPassword().isEmpty()) {
             user.setPassword(passwordEncoder.encode(updateDto.getPassword()));
+        }
+        
+        // Update roles if provided (admin operation)
+        if (updateDto.getRoles() != null && !updateDto.getRoles().isEmpty()) {
+            // Clear existing roles
+            user.getRoles().clear();
+            
+            // Add new roles
+            for (String roleStr : updateDto.getRoles()) {
+                try {
+                    RoleType roleType = RoleType.valueOf(roleStr.toUpperCase());
+                    Role role = roleRepository.findByName(roleType)
+                            .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                    user.addRole(role);
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException("Invalid role: " + roleStr);
+                }
+            }
+            
+            // Update legacy role field for backward compatibility
+            if (!user.getRoles().isEmpty()) {
+                user.setRole(user.getRoles().iterator().next());
+            }
+        }
+        
+        // Update account status if provided (admin operation)
+        if (updateDto.getEnabled() != null) {
+            user.setEnabled(updateDto.getEnabled());
+        }
+        
+        if (updateDto.getAccountNonLocked() != null) {
+            user.setAccountNonLocked(updateDto.getAccountNonLocked());
         }
         
         User updatedUser = userRepository.save(user);
@@ -152,10 +198,67 @@ public class UserService implements IUserService {
         Role role = roleRepository.findByName(roleType)
                 .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
         
+        // Add to roles set (new system)
+        user.addRole(role);
+        // Also update legacy field for backward compatibility
         user.setRole(role);
+        
         User updatedUser = userRepository.save(user);
         
         log.info("Role assigned successfully to user {}", userId);
+        return updatedUser;
+    }
+    
+    @Override
+    @Transactional
+    public User assignRoles(Long userId, java.util.Set<RoleType> roleTypes) {
+        log.info("Assigning roles {} to user {}", roleTypes, userId);
+        
+        User user = getUserById(userId);
+        
+        // Clear existing roles and add new ones
+        user.getRoles().clear();
+        
+        for (RoleType roleType : roleTypes) {
+            Role role = roleRepository.findByName(roleType)
+                    .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+            user.addRole(role);
+        }
+        
+        // Update legacy field for backward compatibility
+        if (!user.getRoles().isEmpty()) {
+            user.setRole(user.getRoles().iterator().next());
+        }
+        
+        User updatedUser = userRepository.save(user);
+        
+        log.info("Roles assigned successfully to user {}", userId);
+        return updatedUser;
+    }
+    
+    @Override
+    @Transactional
+    public User removeRole(Long userId, RoleType roleType) {
+        log.info("Removing role {} from user {}", roleType, userId);
+        
+        User user = getUserById(userId);
+        
+        Role role = roleRepository.findByName(roleType)
+                .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+        
+        user.removeRole(role);
+        
+        // Ensure user has at least one role
+        if (user.getRoles().isEmpty()) {
+            throw new BadRequestException("User must have at least one role");
+        }
+        
+        // Update legacy field
+        user.setRole(user.getRoles().iterator().next());
+        
+        User updatedUser = userRepository.save(user);
+        
+        log.info("Role removed successfully from user {}", userId);
         return updatedUser;
     }
 

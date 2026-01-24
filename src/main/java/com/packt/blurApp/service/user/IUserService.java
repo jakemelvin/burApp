@@ -1,6 +1,7 @@
 package com.packt.blurApp.service.user;
 
 import java.util.List;
+import java.util.Set;
 
 import com.packt.blurApp.dto.User.AddUserDto;
 import com.packt.blurApp.dto.User.UserUpdateDto;
@@ -17,6 +18,10 @@ public interface IUserService {
     User updateUserProfile(Long userId, UserUpdateDto updateDto);
     
     User assignRole(Long userId, RoleType roleType);
+    
+    User assignRoles(Long userId, Set<RoleType> roleTypes);
+    
+    User removeRole(Long userId, RoleType roleType);
     
     void deleteUserById(Long userId);
     
