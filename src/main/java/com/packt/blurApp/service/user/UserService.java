@@ -291,6 +291,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
@@ -301,7 +302,18 @@ public class UserService implements IUserService {
         Object principal = authentication.getPrincipal();
         
         if (principal instanceof User) {
-            return (User) principal;
+            User principalUser = (User) principal;
+            // Reload user from database to get a managed entity in the current transaction
+            // This prevents LazyInitializationException and detached entity issues
+            return userRepository.findById(principalUser.getId())
+                    .orElseThrow(() -> new UnauthorizedException("User not found"));
+        }
+        
+        // Handle case where principal is a String (username)
+        if (principal instanceof String) {
+            String username = (String) principal;
+            return userRepository.findByUserName(username)
+                    .orElseThrow(() -> new UnauthorizedException("User not found"));
         }
         
         throw new UnauthorizedException("Invalid authentication principal");

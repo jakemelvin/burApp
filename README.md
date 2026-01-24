@@ -62,6 +62,74 @@ On first start, the backend creates:
 
 **Change the default password after first login**.
 
+## Initialize Game Data (Cars, Maps, Race Parameters)
+
+Before you can create races, you need to populate the database with game data. The data is stored in CSV files under `scripts/data/`:
+
+```
+scripts/
+├── data/
+│   ├── cars.csv            # 15 racing vehicles
+│   ├── cards.csv           # 30 maps/tracks
+│   └── race_parameters.csv # 13 game modifiers/power-ups
+└── init-game-data.sh       # Import script
+```
+
+### Using the initialization script
+
+```bash
+cd burApp/scripts
+
+# Make the script executable (first time only)
+chmod +x init-game-data.sh
+
+# Interactive menu (recommended)
+./init-game-data.sh
+
+# Or import specific data directly:
+./init-game-data.sh all              # Import all data
+./init-game-data.sh cars             # Import only cars
+./init-game-data.sh cards            # Import only cards (maps/tracks)
+./init-game-data.sh race_parameters  # Import only race parameters
+
+# With custom database connection:
+./init-game-data.sh -h localhost -p 5432 -d blurdb -U postgres all
+
+# Using environment variables:
+DB_PASSWORD=yourpassword ./init-game-data.sh all
+```
+
+### Interactive Menu
+
+When running without arguments, the script shows an interactive menu:
+
+```
+Select what to import:
+
+  1) Import ALL data (cars, cards, race_parameters)
+  2) Import Cars only
+  3) Import Cards (maps/tracks) only
+  4) Import Race Parameters only
+  5) Show current database counts
+  6) Exit
+```
+
+### Adding new game data
+
+To add new cars, maps, or race parameters:
+
+1. Edit the corresponding CSV file in `scripts/data/`:
+   - `cars.csv` - Format: `"id","image_url","name"`
+   - `cards.csv` - Format: `"id","image_url","location","track"`
+   - `race_parameters.csv` - Format: `"id","download_url","is_active","name"`
+
+2. Run the import script for that data type:
+   ```bash
+   ./init-game-data.sh cars  # or cards, race_parameters, all
+   ```
+
+The script is idempotent - it won't create duplicates if run multiple times (checks by name).
+
 ## Main endpoints
 - Auth:
   - `POST /api/auth/login`
