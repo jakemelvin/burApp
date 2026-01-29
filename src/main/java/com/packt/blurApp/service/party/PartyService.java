@@ -58,8 +58,7 @@ public class PartyService implements IPartyService {
                     return savedParty;
                 });
         
-        // Initialize lazy collections to avoid LazyInitializationException
-        org.hibernate.Hibernate.initialize(party.getRaces());
+        // Initialize only what we actually expose in Party DTOs
         org.hibernate.Hibernate.initialize(party.getMembers());
         org.hibernate.Hibernate.initialize(party.getManagers());
         
@@ -73,8 +72,7 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Party not found with ID: " + id));
         
-        // Initialize lazy collections to avoid LazyInitializationException
-        org.hibernate.Hibernate.initialize(party.getRaces());
+        // Initialize only what we actually expose in Party DTOs
         org.hibernate.Hibernate.initialize(party.getMembers());
         org.hibernate.Hibernate.initialize(party.getManagers());
         
@@ -88,8 +86,7 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findByPartyDate(date)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("No party found for date: " + date));
         
-        // Initialize lazy collections to avoid LazyInitializationException
-        org.hibernate.Hibernate.initialize(party.getRaces());
+        // Initialize only what we actually expose in Party DTOs
         org.hibernate.Hibernate.initialize(party.getMembers());
         org.hibernate.Hibernate.initialize(party.getManagers());
         
@@ -102,9 +99,8 @@ public class PartyService implements IPartyService {
         log.debug("Fetching all parties");
         List<Party> parties = partyRepository.findAll();
         
-        // Initialize lazy collections for each party
+        // Initialize only what we actually expose in Party DTOs
         parties.forEach(party -> {
-            org.hibernate.Hibernate.initialize(party.getRaces());
             org.hibernate.Hibernate.initialize(party.getMembers());
             org.hibernate.Hibernate.initialize(party.getManagers());
         });

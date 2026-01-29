@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import com.packt.blurApp.dto.Race.RaceResponseDto;
 import com.packt.blurApp.mapper.partyMapper.PartyMapper;
 import com.packt.blurApp.mapper.scoreMapper.ScoreMapper;
+import com.packt.blurApp.dto.User.UserMiniDto;
 import com.packt.blurApp.mapper.userMapper.UserResponseMapper;
 import com.packt.blurApp.model.Race;
 import com.packt.blurApp.model.Attribution;
@@ -47,10 +48,10 @@ public class RaceMapper {
                 .collect(Collectors.toSet()));
         }
         
-        // Map participants
+        // Map participants (use lightweight DTO to avoid recursive mapping)
         if (race.getParticipants() != null) {
             dto.setRacers(race.getParticipants().stream()
-                .map(UserResponseMapper::toUserResponseDto)
+                .map(u -> new UserMiniDto(u.getId(), u.getUsername()))
                 .collect(Collectors.toSet()));
         }
         

@@ -36,6 +36,7 @@ public class RaceService implements IRaceService {
     private final Random random = new Random();
 
     @Override
+    @Transactional(readOnly = true)
     public Race getRaceById(Long id) {
         log.debug("Fetching race by ID: {}", id);
         return raceRepository.findById(id)
@@ -268,18 +269,21 @@ public class RaceService implements IRaceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Race> getAllRaces() {
         log.debug("Fetching all races");
         return raceRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Race> getRacesByPartyId(Long partyId) {
         log.debug("Fetching races for party {}", partyId);
         return raceRepository.findByParty_Id(partyId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Race> getRacesByStatus(String status) {
         log.debug("Fetching races by status: {}", status);
         try {

@@ -28,7 +28,7 @@ public class RaceResponseDto {
   @Builder.Default
   private Set<ScoreResponseDto> scores = new HashSet<>();
   @Builder.Default
-  private Set<UserResponseDto> racers = new HashSet<>();
+  private Set<com.packt.blurApp.dto.User.UserMiniDto> racers = new HashSet<>();
   @Builder.Default
   private Set<RaceParameterDto> raceParameters = new HashSet<>();
   private CarDto car;
