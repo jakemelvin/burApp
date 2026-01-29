@@ -96,6 +96,26 @@ public class PartyController {
                 PartyMapper.toPartyGetResponseDto(party)));
     }
 
+    @GetMapping("/{id}/active")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
+    public ResponseEntity<ApiResponse<?>> getPartyActiveStatus(@PathVariable Long id) {
+        log.info("GET ${api.prefix}/parties/{}/active - Get party active status", id);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Party active status fetched successfully",
+                partyService.getPartyActiveStatus(id)));
+    }
+
+    @GetMapping("/{id}/members")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
+    public ResponseEntity<ApiResponse<?>> getPartyMembers(@PathVariable Long id) {
+        log.info("GET ${api.prefix}/parties/{}/members - Get party members", id);
+        java.util.Set<com.packt.blurApp.dto.User.UserResponseDto> members = partyService.getPartyMembers(id)
+                .stream()
+                .map(u -> new com.packt.blurApp.dto.User.UserResponseDto(u.getId(), u.getUsername()))
+                .collect(java.util.stream.Collectors.toSet());
+        return ResponseEntity.ok(ApiResponse.success("Party members fetched successfully", members));
+    }
+
     @DeleteMapping("/{partyId}")
     @PreAuthorize("hasAuthority('DELETE_PARTY')")
     public ResponseEntity<ApiResponse<?>> deactivateParty(@PathVariable Long partyId) {

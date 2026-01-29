@@ -24,4 +24,14 @@ public interface IPartyService {
     Party removeManager(Long partyId, Long userId);
     
     void deactivateParty(Long partyId);
+
+    /**
+     * Checks whether party actions are allowed for this party.
+     * A party is considered actionable only for the current day and if it is not deactivated.
+     */
+    com.packt.blurApp.dto.Party.PartyActiveStatusDto getPartyActiveStatus(Long partyId);
+
+    java.util.Set<com.packt.blurApp.model.User> getPartyMembers(Long partyId);
 }
+
+

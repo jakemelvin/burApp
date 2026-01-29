@@ -166,25 +166,34 @@ public class UserService implements IUserService {
     @Transactional
     public User updateUserProfile(Long userId, UserUpdateDto updateDto) {
         log.info("Updating user profile: {}", userId);
-        
+
         User currentUser = getCurrentUser();
-        
+
         // Users can only update their own profile
         if (!currentUser.getId().equals(userId)) {
             throw new ForbiddenException("You can only update your own profile");
         }
-        
+
+        // Non-admin users cannot change username/email via the profile endpoint.
+        // Those fields are considered admin-managed.
+        boolean isGreatAdmin = currentUser.getRole() != null && currentUser.getRole().getName() == RoleType.GREAT_ADMIN;
+        if (!isGreatAdmin) {
+            if (updateDto.getUserName() != null || updateDto.getEmail() != null) {
+                throw new ForbiddenException("Only GREAT_ADMIN can change username or email");
+            }
+        }
+
         // Verify current password if changing password
         if (updateDto.getPassword() != null) {
             if (updateDto.getCurrentPassword() == null) {
                 throw new BadRequestException("Current password is required to change password");
             }
-            
+
             if (!passwordEncoder.matches(updateDto.getCurrentPassword(), currentUser.getPassword())) {
                 throw new BadRequestException("Current password is incorrect");
             }
         }
-        
+
         return updateUser(userId, updateDto);
     }
 

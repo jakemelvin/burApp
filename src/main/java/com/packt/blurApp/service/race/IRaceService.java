@@ -25,4 +25,6 @@ public interface IRaceService {
     List<Race> getRacesByPartyId(Long partyId);
     
     List<Race> getRacesByStatus(String status);
+
+    long getTotalRacesCount();
 }

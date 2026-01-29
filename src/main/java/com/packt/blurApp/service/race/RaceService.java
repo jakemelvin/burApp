@@ -80,9 +80,9 @@ public class RaceService implements IRaceService {
             }
         });
         
+        // Persist race (party relationship is already set via builder)
         Race savedRace = raceRepository.save(race);
-        party.addRace(savedRace);
-        
+
         log.info("Race created successfully with ID: {}", savedRace.getId());
         return savedRace;
     }
@@ -288,5 +288,10 @@ public class RaceService implements IRaceService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid race status: " + status);
         }
+    }
+
+    @Override
+    public long getTotalRacesCount() {
+        return raceRepository.count();
     }
 }

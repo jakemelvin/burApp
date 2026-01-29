@@ -23,14 +23,21 @@ public class PartyMapper {
         PartyGetResponseDto dto = new PartyGetResponseDto();
         dto.setId(party.getId());
         dto.setDatePlayed(party.getPartyDate() != null ? party.getPartyDate().atStartOfDay() : null);
-        
-        if (party.getRaces() != null && org.hibernate.Hibernate.isInitialized(party.getRaces())) {
-            Set<com.packt.blurApp.dto.Race.RaceResponseDto> raceDtos = party.getRaces().stream()
-                .map(RaceMapper::toRaceResponseDto)
-                .collect(Collectors.toSet());
-            dto.setRacesPlayed(raceDtos);
+
+        if (party.getCreator() != null) {
+            dto.setCreator(new com.packt.blurApp.dto.Party.PartyUserMiniDto(
+                party.getCreator().getId(),
+                party.getCreator().getUsername()
+            ));
         }
-        
+
+        if (party.getManagers() != null && org.hibernate.Hibernate.isInitialized(party.getManagers())) {
+            java.util.Set<com.packt.blurApp.dto.Party.PartyUserMiniDto> managerDtos = party.getManagers().stream()
+                .map(u -> new com.packt.blurApp.dto.Party.PartyUserMiniDto(u.getId(), u.getUsername()))
+                .collect(Collectors.toSet());
+            dto.setManagers(managerDtos);
+        }
+
         return dto;
     }
 

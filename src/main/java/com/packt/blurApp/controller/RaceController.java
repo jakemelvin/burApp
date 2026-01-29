@@ -37,6 +37,15 @@ public class RaceController {
                 RaceMapper.toRaceResponseDtoList(raceService.getAllRaces())));
     }
 
+    @GetMapping("/count")
+    @PreAuthorize("hasAuthority('VIEW_RACE')")
+    public ResponseEntity<ApiResponse<?>> getTotalRacesCount() {
+        log.info("GET ${api.prefix}/races/count - Get total races count");
+        return ResponseEntity.ok(ApiResponse.success(
+                "Races count fetched successfully",
+                new com.packt.blurApp.dto.Race.RaceCountDto(raceService.getTotalRacesCount())));
+    }
+
     @GetMapping("/party/{partyId}")
     @PreAuthorize("hasAuthority('VIEW_RACE')")
     public ResponseEntity<ApiResponse<?>> getRacesByPartyId(@PathVariable Long partyId) {

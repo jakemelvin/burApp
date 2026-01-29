@@ -244,4 +244,44 @@ public class PartyService implements IPartyService {
         
         log.info("Party {} deactivated successfully", partyId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.packt.blurApp.dto.Party.PartyActiveStatusDto getPartyActiveStatus(Long partyId) {
+        Party party = getPartyById(partyId);
+
+        LocalDate today = LocalDate.now();
+        LocalDate partyDate = party.getPartyDate();
+
+        boolean active = party.isActive();
+        boolean isToday = partyDate != null && partyDate.equals(today);
+        boolean actionable = active && isToday;
+
+        String reason;
+        if (!active) {
+            reason = "PARTY_DEACTIVATED";
+        } else if (partyDate == null) {
+            reason = "PARTY_DATE_MISSING";
+        } else if (!isToday) {
+            reason = "PARTY_DATE_NOT_TODAY";
+        } else {
+            reason = "OK";
+        }
+
+        return new com.packt.blurApp.dto.Party.PartyActiveStatusDto(
+                party.getId(),
+                active,
+                actionable,
+                partyDate,
+                today,
+                reason);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Set<User> getPartyMembers(Long partyId) {
+        Party party = getPartyById(partyId);
+        org.hibernate.Hibernate.initialize(party.getMembers());
+        return party.getMembers();
+    }
 }
