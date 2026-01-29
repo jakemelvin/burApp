@@ -5,7 +5,7 @@ import com.packt.blurApp.exceptions.ConflictException;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.enums.PermissionType;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +29,19 @@ public class RoleService implements IRoleService {
 
     @Override
     @Transactional
-    public Role createRole(RoleType name, String description, Set<PermissionType> permissions) {
-        if (roleRepository.existsByName(name)) {
-            throw new ConflictException("Role already exists: " + name);
+    public Role createRole(String name, String description, Set<PermissionType> permissions) {
+        String normalized = name != null ? name.trim().toUpperCase() : null;
+        if (normalized == null || normalized.isBlank()) {
+            throw new BadRequestException("Role name is required");
+        }
+        if (RoleNames.GREAT_ADMIN.equalsIgnoreCase(normalized)) {
+            throw new BadRequestException("Cannot create GREAT_ADMIN role");
+        }
+        if (roleRepository.existsByName(normalized)) {
+            throw new ConflictException("Role already exists: " + normalized);
         }
         Role role = Role.builder()
-                .name(name)
+                .name(normalized)
                 .description(description)
                 .permissions(permissions)
                 .build();
@@ -46,8 +53,11 @@ public class RoleService implements IRoleService {
     public Role updateRole(Long id, String description, Set<PermissionType> permissions) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Role not found with ID: " + id));
+        if (RoleNames.GREAT_ADMIN.equalsIgnoreCase(role.getName())) {
+            throw new BadRequestException("Cannot modify GREAT_ADMIN role");
+        }
         if (description != null) role.setDescription(description);
-        if (permissions != null && !permissions.isEmpty()) role.setPermissions(permissions);
+        if (permissions != null) role.setPermissions(permissions);
         return roleRepository.save(role);
     }
 
@@ -57,7 +67,7 @@ public class RoleService implements IRoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Role not found with ID: " + id));
         // Protect critical roles
-        if (role.getName() == RoleType.GREAT_ADMIN) {
+        if (RoleNames.GREAT_ADMIN.equalsIgnoreCase(role.getName())) {
             throw new BadRequestException("Cannot delete GREAT_ADMIN role");
         }
         roleRepository.delete(role);

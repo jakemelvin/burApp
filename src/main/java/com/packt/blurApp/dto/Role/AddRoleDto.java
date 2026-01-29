@@ -10,7 +10,7 @@ import java.util.Set;
 @Data
 public class AddRoleDto {
     @NotBlank
-    private String name; // RoleType enum name
+    private String name; // Dynamic role name (String). GREAT_ADMIN is reserved.
     private String description;
     @NotNull
     private Set<PermissionType> permissions;

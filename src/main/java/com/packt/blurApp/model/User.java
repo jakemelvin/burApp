@@ -18,7 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 
 @Entity
 @Data
@@ -120,7 +120,7 @@ public class User implements UserDetails {
         // Add authorities from multiple roles (new system)
         if (roles != null && !roles.isEmpty()) {
             for (Role r : roles) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + r.getName().name()));
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + r.getName()));
                 
                 if (r.getPermissions() != null) {
                     authorities.addAll(
@@ -134,7 +134,7 @@ public class User implements UserDetails {
         
         // Fallback to legacy single role for backward compatibility
         if (authorities.isEmpty() && role != null) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName().name()));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
             
             if (role.getPermissions() != null) {
                 authorities.addAll(
@@ -157,9 +157,15 @@ public class User implements UserDetails {
         this.roles.remove(role);
     }
     
-    public boolean hasRole(RoleType roleType) {
-        return roles.stream().anyMatch(r -> r.getName() == roleType) ||
-               (role != null && role.getName() == roleType);
+    public boolean hasRole(String roleName) {
+        if (roleName == null) return false;
+        String normalized = roleName.trim().toUpperCase();
+        return roles.stream().anyMatch(r -> normalized.equalsIgnoreCase(r.getName())) ||
+               (role != null && normalized.equalsIgnoreCase(role.getName()));
+    }
+
+    public boolean isGreatAdmin() {
+        return hasRole(RoleNames.GREAT_ADMIN);
     }
     
     public Set<Role> getAllRoles() {

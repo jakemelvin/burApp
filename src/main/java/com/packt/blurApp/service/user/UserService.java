@@ -17,7 +17,7 @@ import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.exceptions.UnauthorizedException;
 import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.User;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.repository.RoleRepository;
 import com.packt.blurApp.repository.UserRepository;
 
@@ -69,9 +69,9 @@ public class UserService implements IUserService {
         if (addUserDto.getRoles() != null && !addUserDto.getRoles().isEmpty()) {
             for (String roleStr : addUserDto.getRoles()) {
                 try {
-                    RoleType roleType = RoleType.valueOf(roleStr.toUpperCase());
-                    Role role = roleRepository.findByName(roleType)
-                            .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                    String normalized = roleStr.trim().toUpperCase();
+                    Role role = roleRepository.findByName(normalized)
+                            .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
                     newUser.addRole(role);
                 } catch (IllegalArgumentException e) {
                     throw new BadRequestException("Invalid role: " + roleStr);
@@ -80,9 +80,9 @@ public class UserService implements IUserService {
         } else if (addUserDto.getRole() != null) {
             // Fallback to legacy single role
             try {
-                RoleType roleType = RoleType.valueOf(addUserDto.getRole().toUpperCase());
-                Role role = roleRepository.findByName(roleType)
-                        .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                String normalized = addUserDto.getRole().trim().toUpperCase();
+                Role role = roleRepository.findByName(normalized)
+                        .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
                 newUser.addRole(role);
                 newUser.setRole(role); // Keep legacy field for backward compatibility
             } catch (IllegalArgumentException e) {
@@ -133,9 +133,9 @@ public class UserService implements IUserService {
             // Add new roles
             for (String roleStr : updateDto.getRoles()) {
                 try {
-                    RoleType roleType = RoleType.valueOf(roleStr.toUpperCase());
-                    Role role = roleRepository.findByName(roleType)
-                            .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+                    String normalized = roleStr.trim().toUpperCase();
+                    Role role = roleRepository.findByName(normalized)
+                            .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
                     user.addRole(role);
                 } catch (IllegalArgumentException e) {
                     throw new BadRequestException("Invalid role: " + roleStr);
@@ -176,7 +176,7 @@ public class UserService implements IUserService {
 
         // Non-admin users cannot change username/email via the profile endpoint.
         // Those fields are considered admin-managed.
-        boolean isGreatAdmin = currentUser.getRole() != null && currentUser.getRole().getName() == RoleType.GREAT_ADMIN;
+        boolean isGreatAdmin = currentUser.isGreatAdmin();
         if (!isGreatAdmin) {
             if (updateDto.getUserName() != null || updateDto.getEmail() != null) {
                 throw new ForbiddenException("Only GREAT_ADMIN can change username or email");
@@ -199,18 +199,23 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public User assignRole(Long userId, RoleType roleType) {
-        log.info("Assigning role {} to user {}", roleType, userId);
+    public User assignRole(Long userId, String roleName) {
+        log.info("Assigning role {} to user {}", roleName, userId);
         
         User user = getUserById(userId);
         
-        Role role = roleRepository.findByName(roleType)
-                .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+        String normalized = roleName.trim().toUpperCase();
+        Role role = roleRepository.findByName(normalized)
+                .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
         
-        // Add to roles set (new system)
+        // Add to roles set (multi-role system)
         user.addRole(role);
-        // Also update legacy field for backward compatibility
-        user.setRole(role);
+
+        // Keep legacy single-role field stable for backward compatibility:
+        // only set it if not set yet.
+        if (user.getRole() == null) {
+            user.setRole(role);
+        }
         
         User updatedUser = userRepository.save(user);
         
@@ -220,17 +225,18 @@ public class UserService implements IUserService {
     
     @Override
     @Transactional
-    public User assignRoles(Long userId, java.util.Set<RoleType> roleTypes) {
-        log.info("Assigning roles {} to user {}", roleTypes, userId);
+    public User assignRoles(Long userId, java.util.Set<String> roleNames) {
+        log.info("Assigning roles {} to user {}", roleNames, userId);
         
         User user = getUserById(userId);
         
         // Clear existing roles and add new ones
         user.getRoles().clear();
         
-        for (RoleType roleType : roleTypes) {
-            Role role = roleRepository.findByName(roleType)
-                    .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+        for (String roleName : roleNames) {
+            String normalized = roleName.trim().toUpperCase();
+            Role role = roleRepository.findByName(normalized)
+                    .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
             user.addRole(role);
         }
         
@@ -247,13 +253,14 @@ public class UserService implements IUserService {
     
     @Override
     @Transactional
-    public User removeRole(Long userId, RoleType roleType) {
-        log.info("Removing role {} from user {}", roleType, userId);
+    public User removeRole(Long userId, String roleName) {
+        log.info("Removing role {} from user {}", roleName, userId);
         
         User user = getUserById(userId);
         
-        Role role = roleRepository.findByName(roleType)
-                .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+        String normalized = roleName.trim().toUpperCase();
+        Role role = roleRepository.findByName(normalized)
+                .orElseThrow(() -> new BadRequestException("Role not found: " + normalized));
         
         user.removeRole(role);
         
@@ -262,8 +269,11 @@ public class UserService implements IUserService {
             throw new BadRequestException("User must have at least one role");
         }
         
-        // Update legacy field
-        user.setRole(user.getRoles().iterator().next());
+        // Update legacy field for backward compatibility
+        // Ensure it points to an existing role if current legacy role was removed.
+        if (user.getRole() == null || !user.getRoles().contains(user.getRole())) {
+            user.setRole(user.getRoles().iterator().next());
+        }
         
         User updatedUser = userRepository.save(user);
         
@@ -279,9 +289,9 @@ public class UserService implements IUserService {
         User userToDelete = getUserById(userId);
         
         // Prevent deleting the last GREAT_ADMIN
-        if (userToDelete.getRole().getName() == RoleType.GREAT_ADMIN) {
+        if (userToDelete.isGreatAdmin()) {
             long adminCount = userRepository.findAll().stream()
-                    .filter(u -> u.getRole().getName() == RoleType.GREAT_ADMIN)
+                    .filter(User::isGreatAdmin)
                     .count();
             
             if (adminCount <= 1) {

@@ -6,7 +6,6 @@ import java.util.Set;
 import com.packt.blurApp.dto.User.AddUserDto;
 import com.packt.blurApp.dto.User.UserUpdateDto;
 import com.packt.blurApp.model.User;
-import com.packt.blurApp.model.enums.RoleType;
 
 public interface IUserService {
     User getUserById(Long userId);
@@ -17,11 +16,11 @@ public interface IUserService {
     
     User updateUserProfile(Long userId, UserUpdateDto updateDto);
     
-    User assignRole(Long userId, RoleType roleType);
+    User assignRole(Long userId, String roleName);
     
-    User assignRoles(Long userId, Set<RoleType> roleTypes);
+    User assignRoles(Long userId, Set<String> roleNames);
     
-    User removeRole(Long userId, RoleType roleType);
+    User removeRole(Long userId, String roleName);
     
     void deleteUserById(Long userId);
     

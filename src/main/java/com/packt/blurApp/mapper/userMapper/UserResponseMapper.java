@@ -32,7 +32,7 @@ public class UserResponseMapper {
         Set<Role> allRoles = user.getAllRoles();
         if (!allRoles.isEmpty()) {
             // Set primary role (first one) for backward compatibility
-            dto.setRole(allRoles.iterator().next().getName().name());
+            dto.setRole(allRoles.iterator().next().getName());
             
             // Collect all permissions from all roles
             Set<String> allPermissions = new HashSet<>();
@@ -63,11 +63,11 @@ public class UserResponseMapper {
         if (!allRoles.isEmpty()) {
             // Set multiple roles
             dto.setRoles(allRoles.stream()
-                .map(r -> r.getName().name())
+                .map(Role::getName)
                 .collect(Collectors.toSet()));
             
             // Set primary role for backward compatibility
-            dto.setRole(allRoles.iterator().next().getName().name());
+            dto.setRole(allRoles.iterator().next().getName());
             
             // Collect all permissions from all roles
             Set<String> allPermissions = new HashSet<>();

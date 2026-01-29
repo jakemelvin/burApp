@@ -1,7 +1,7 @@
 package com.packt.blurApp.model;
 
 import com.packt.blurApp.model.enums.PermissionType;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,9 +23,8 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, unique = true, length = 50)
-    private RoleType name;
+    private String name;
     
     @Column(length = 255)
     private String description;
@@ -46,7 +45,7 @@ public class Role {
     // Predefined roles with their permissions
     public static Role createGreatAdminRole() {
         return Role.builder()
-                .name(RoleType.GREAT_ADMIN)
+                .name(RoleNames.GREAT_ADMIN)
                 .description("Great Administrator with all permissions")
                 .permissions(Set.of(
                     PermissionType.ALL_PERMISSIONS,
@@ -76,7 +75,7 @@ public class Role {
     
     public static Role createPartyManagerRole() {
         return Role.builder()
-                .name(RoleType.PARTY_MANAGER)
+                .name("PARTY_MANAGER")
                 .description("Party Manager can create and manage parties and races")
                 .permissions(Set.of(
                     PermissionType.CREATE_PARTY,
@@ -103,7 +102,7 @@ public class Role {
     
     public static Role createRacerRole() {
         return Role.builder()
-                .name(RoleType.RACER)
+                .name("RACER")
                 .description("Racer can join parties and participate in races")
                 .permissions(Set.of(
                     PermissionType.JOIN_PARTY,

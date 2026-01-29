@@ -2,7 +2,7 @@ package com.packt.blurApp.config;
 
 import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.User;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.repository.RoleRepository;
 import com.packt.blurApp.repository.UserRepository;
 import com.packt.blurApp.repository.PartyRepository;
@@ -48,21 +48,21 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing roles...");
         
         // Create GREAT_ADMIN role
-        if (!roleRepository.existsByName(RoleType.GREAT_ADMIN)) {
+        if (!roleRepository.existsByName(RoleNames.GREAT_ADMIN)) {
             Role greatAdmin = Role.createGreatAdminRole();
             roleRepository.save(greatAdmin);
             log.info("Created role: GREAT_ADMIN");
         }
         
         // Create PARTY_MANAGER role
-        if (!roleRepository.existsByName(RoleType.PARTY_MANAGER)) {
+        if (!roleRepository.existsByName("PARTY_MANAGER")) {
             Role partyManager = Role.createPartyManagerRole();
             roleRepository.save(partyManager);
             log.info("Created role: PARTY_MANAGER");
         }
         
         // Create RACER role
-        if (!roleRepository.existsByName(RoleType.RACER)) {
+        if (!roleRepository.existsByName("RACER")) {
             Role racer = Role.createRacerRole();
             roleRepository.save(racer);
             log.info("Created role: RACER");
@@ -74,9 +74,9 @@ public class DataInitializer implements CommandLineRunner {
     private void backfillExistingUsers() {
         log.info("Backfilling existing users (role + flags + timestamps)...");
 
-        Role racerRole = roleRepository.findByName(RoleType.RACER)
+        Role racerRole = roleRepository.findByName("RACER")
                 .orElseThrow(() -> new RuntimeException("RACER role not found"));
-        Role greatAdminRole = roleRepository.findByName(RoleType.GREAT_ADMIN)
+        Role greatAdminRole = roleRepository.findByName(RoleNames.GREAT_ADMIN)
                 .orElseThrow(() -> new RuntimeException("GREAT_ADMIN role not found"));
 
         userRepository.findAll().forEach(u -> {
@@ -221,7 +221,7 @@ public class DataInitializer implements CommandLineRunner {
         String defaultAdminUsername = "admin";
         
         if (!userRepository.existsByUserName(defaultAdminUsername)) {
-            Role greatAdminRole = roleRepository.findByName(RoleType.GREAT_ADMIN)
+            Role greatAdminRole = roleRepository.findByName(RoleNames.GREAT_ADMIN)
                     .orElseThrow(() -> new RuntimeException("GREAT_ADMIN role not found"));
             
             User admin = User.builder()

@@ -1,7 +1,6 @@
 package com.packt.blurApp.controller.auth;
 
 import com.packt.blurApp.dto.User.UserSignInDto;
-import com.packt.blurApp.model.enums.RoleType;
 import com.packt.blurApp.response.AuthResponse;
 import com.packt.blurApp.service.security.AuthService;
 import jakarta.validation.Valid;
@@ -29,7 +28,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserSignInDto request) {
         log.info("POST /api/auth/register - Registration request for user: {}", request.getUserName());
         // By default, new users are registered as RACER
-        AuthResponse response = authService.register(request, RoleType.RACER);
+        AuthResponse response = authService.register(request, "RACER");
         return ResponseEntity.ok(response);
     }
 

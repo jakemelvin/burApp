@@ -8,7 +8,8 @@ import com.packt.blurApp.dto.User.AddUserDto;
 import com.packt.blurApp.dto.User.UserUpdateDto;
 import com.packt.blurApp.mapper.userMapper.UserResponseMapper;
 import com.packt.blurApp.model.User;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.model.Role;
+import com.packt.blurApp.service.role.IRoleService;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.user.IUserService;
 
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserController {
     private final IUserService userService;
+    private final IRoleService roleService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_ALL_USERS')")
@@ -77,8 +79,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<?>> assignRole(@PathVariable Long userId,
                                                       @RequestParam String role) {
         log.info("PUT ${api.prefix}/users/{}/role - Assign role: {}", userId, role);
-        RoleType roleType = RoleType.valueOf(role.toUpperCase());
-        User updatedUser = userService.assignRole(userId, roleType);
+        User updatedUser = userService.assignRole(userId, role);
         return ResponseEntity.ok(ApiResponse.success("Role assigned successfully",
                 UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
     }
@@ -88,10 +89,10 @@ public class UserController {
     public ResponseEntity<ApiResponse<?>> assignRoles(@PathVariable Long userId,
                                                        @RequestBody List<String> roles) {
         log.info("PUT ${api.prefix}/users/{}/roles - Assign roles: {}", userId, roles);
-        Set<RoleType> roleTypes = roles.stream()
-                .map(r -> RoleType.valueOf(r.toUpperCase()))
+        Set<String> roleNames = roles.stream()
+                .map(r -> r.toUpperCase())
                 .collect(Collectors.toSet());
-        User updatedUser = userService.assignRoles(userId, roleTypes);
+        User updatedUser = userService.assignRoles(userId, roleNames);
         return ResponseEntity.ok(ApiResponse.success("Roles assigned successfully",
                 UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
     }
@@ -101,8 +102,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<?>> removeRole(@PathVariable Long userId,
                                                       @PathVariable String role) {
         log.info("DELETE ${api.prefix}/users/{}/roles/{} - Remove role", userId, role);
-        RoleType roleType = RoleType.valueOf(role.toUpperCase());
-        User updatedUser = userService.removeRole(userId, roleType);
+        User updatedUser = userService.removeRole(userId, role);
         return ResponseEntity.ok(ApiResponse.success("Role removed successfully",
                 UserResponseMapper.toUserGlobalResponseDto(updatedUser)));
     }
@@ -111,8 +111,8 @@ public class UserController {
     @PreAuthorize("hasAuthority('VIEW_ALL_USERS')")
     public ResponseEntity<ApiResponse<?>> getAllRoles() {
         log.info("GET ${api.prefix}/users/roles - Get all available roles");
-        List<String> roles = java.util.Arrays.stream(RoleType.values())
-                .map(Enum::name)
+        List<String> roles = roleService.getAll().stream()
+                .map(Role::getName)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Roles fetched successfully", roles));
     }

@@ -8,7 +8,7 @@ import com.packt.blurApp.exceptions.UnauthorizedException;
 import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.User;
 import com.packt.blurApp.model.enums.PermissionType;
-import com.packt.blurApp.model.enums.RoleType;
+import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.repository.RoleRepository;
 import com.packt.blurApp.repository.UserRepository;
 import com.packt.blurApp.response.AuthResponse;
@@ -64,7 +64,7 @@ public class AuthService {
 
             // Build roles and permissions (union)
             var allRoles = user.getAllRoles();
-            var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+            var rolesList = allRoles.stream().map(Role::getName).collect(Collectors.toList());
             var permissionsList = allRoles.stream()
                     .flatMap(r -> r.getPermissions().stream())
                     .map(PermissionType::name)
@@ -82,7 +82,7 @@ public class AuthService {
                             .id(user.getId())
                             .username(user.getUsername())
                             .email(user.getEmail())
-                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName() : null))
                             .roles(rolesList)
                             .permissions(permissionsList)
                             .build())
@@ -95,7 +95,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse register(UserSignInDto request, RoleType roleType) {
+    public AuthResponse register(UserSignInDto request, String roleName) {
         log.info("Registration attempt for user: {}", request.getUserName());
 
         // Check if username already exists
@@ -109,8 +109,9 @@ public class AuthService {
         }
 
         // Get role
-        Role role = roleRepository.findByName(roleType)
-                .orElseThrow(() -> new BadRequestException("Role not found: " + roleType));
+        String normalizedRole = (roleName == null || roleName.isBlank()) ? "RACER" : roleName.trim().toUpperCase();
+        Role role = roleRepository.findByName(normalizedRole)
+                .orElseThrow(() -> new BadRequestException("Role not found: " + normalizedRole));
 
         // Create new user
         User user = User.builder()
@@ -130,10 +131,10 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        log.info("User '{}' registered successfully with role '{}'", user.getUsername(), roleType);
+        log.info("User '{}' registered successfully", user.getUsername());
 
         var allRoles = user.getAllRoles();
-        var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+        var rolesList = allRoles.stream().map(Role::getName).collect(Collectors.toList());
         var permissionsList = allRoles.stream()
                 .flatMap(r -> r.getPermissions().stream())
                 .map(PermissionType::name)
@@ -151,7 +152,7 @@ public class AuthService {
                         .id(user.getId())
                         .username(user.getUsername())
                         .email(user.getEmail())
-                        .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                        .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName() : null))
                         .roles(rolesList)
                         .permissions(permissionsList)
                         .build())
@@ -181,7 +182,7 @@ public class AuthService {
             log.info("Token refreshed successfully for user: {}", username);
 
             var allRoles = user.getAllRoles();
-            var rolesList = allRoles.stream().map(r -> r.getName().name()).collect(Collectors.toList());
+            var rolesList = allRoles.stream().map(Role::getName).collect(Collectors.toList());
             var permissionsList = allRoles.stream()
                     .flatMap(r -> r.getPermissions().stream())
                     .map(PermissionType::name)
@@ -199,7 +200,7 @@ public class AuthService {
                             .id(user.getId())
                             .username(user.getUsername())
                             .email(user.getEmail())
-                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName().name() : null))
+                            .role(!rolesList.isEmpty() ? rolesList.get(0) : (user.getRole() != null ? user.getRole().getName() : null))
                             .roles(rolesList)
                             .permissions(permissionsList)
                             .build())

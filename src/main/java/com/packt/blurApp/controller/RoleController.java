@@ -5,7 +5,6 @@ import com.packt.blurApp.dto.Role.RoleResponseDto;
 import com.packt.blurApp.dto.Role.UpdateRoleDto;
 import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.enums.PermissionType;
-import com.packt.blurApp.model.enums.RoleType;
 import com.packt.blurApp.response.ApiResponse;
 import com.packt.blurApp.service.role.IRoleService;
 import jakarta.validation.Valid;
@@ -38,7 +37,7 @@ public class RoleController {
     @PostMapping
     @PreAuthorize("hasAuthority('ASSIGN_ROLES')")
     public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody AddRoleDto dto) {
-        Role role = roleService.createRole(RoleType.valueOf(dto.getName()), dto.getDescription(), dto.getPermissions());
+        Role role = roleService.createRole(dto.getName(), dto.getDescription(), dto.getPermissions());
         return ResponseEntity.ok(ApiResponse.success("Role created successfully", toDto(role)));
     }
 
@@ -59,7 +58,7 @@ public class RoleController {
     private RoleResponseDto toDto(Role r) {
         RoleResponseDto res = new RoleResponseDto();
         res.setId(r.getId());
-        res.setName(r.getName().name());
+        res.setName(r.getName());
         res.setDescription(r.getDescription());
         res.setPermissions(r.getPermissions().stream().map(PermissionType::name).collect(Collectors.toSet()));
         return res;
