@@ -11,22 +11,67 @@ import com.packt.blurApp.model.enums.RaceStatus;
 
 @Repository
 public interface RaceRepository extends JpaRepository<Race, Long> {
+
     @EntityGraph(attributePaths = {
-        "party",
-        "creator",
-        "scoreCollector",
-        "card",
-        "raceParameters",
-        "participants",
-        "scores",
-        "scores.user",
-        "attributions",
-        "attributions.user",
-        "attributions.car"
+            "party",
+            "creator",
+            "scoreCollector",
+            "card",
+            "raceParameters",
+            "participants",
+            "scores",
+            "scores.user",
+            "attributions",
+            "attributions.user",
+            "attributions.car"
+    })
+    java.util.Optional<Race> findWithGraphById(Long id);
+
+    @Override
+    @EntityGraph(attributePaths = {
+            "party",
+            "creator",
+            "scoreCollector",
+            "card",
+            "raceParameters",
+            "participants",
+            "scores",
+            "scores.user",
+            "attributions",
+            "attributions.user",
+            "attributions.car"
+    })
+    List<Race> findAll();
+
+    @EntityGraph(attributePaths = {
+            "party",
+            "creator",
+            "scoreCollector",
+            "card",
+            "raceParameters",
+            "participants",
+            "scores",
+            "scores.user",
+            "attributions",
+            "attributions.user",
+            "attributions.car"
     })
     List<Race> findByParty_Id(Long partyId);
-    
-    List<Race> findByPartyIdAndStatus(Long partyId, RaceStatus status);
-    
+
+    @EntityGraph(attributePaths = {
+            "party",
+            "creator",
+            "scoreCollector",
+            "card",
+            "raceParameters",
+            "participants",
+            "scores",
+            "scores.user",
+            "attributions",
+            "attributions.user",
+            "attributions.car"
+    })
     List<Race> findByStatus(RaceStatus status);
+
+    List<Race> findByPartyIdAndStatus(Long partyId, RaceStatus status);
 }

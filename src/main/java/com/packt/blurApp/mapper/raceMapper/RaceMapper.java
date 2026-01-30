@@ -40,6 +40,20 @@ public class RaceMapper {
         if (race.getCard() != null) {
             dto.setCard(toCardDto(race.getCard()));
         }
+
+        // Map global car (backend stores car attribution in Attributions, not directly on Race)
+        // If ALL_USERS, all attributions share same car; expose it via dto.car for frontend convenience.
+        if (race.getAttributionType() != null
+                && race.getAttributionType().name().equals("ALL_USERS")
+                && race.getAttributions() != null
+                && !race.getAttributions().isEmpty()) {
+            Car car = race.getAttributions().stream()
+                    .map(Attribution::getCar)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+            dto.setCar(toCarDto(car));
+        }
         
         // Map race parameters
         if (race.getRaceParameters() != null) {

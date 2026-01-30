@@ -39,7 +39,7 @@ public class RaceService implements IRaceService {
     @Transactional(readOnly = true)
     public Race getRaceById(Long id) {
         log.debug("Fetching race by ID: {}", id);
-        return raceRepository.findById(id)
+        return raceRepository.findWithGraphById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Race not found with ID: " + id));
     }
 
@@ -84,8 +84,11 @@ public class RaceService implements IRaceService {
         // Persist race (party relationship is already set via builder)
         Race savedRace = raceRepository.save(race);
 
-        log.info("Race created successfully with ID: {}", savedRace.getId());
-        return savedRace;
+        // Re-fetch with entity graph so controller->mapper never triggers LazyInitializationException
+        Race hydratedRace = getRaceById(savedRace.getId());
+
+        log.info("Race created successfully with ID: {}", hydratedRace.getId());
+        return hydratedRace;
     }
 
     @Override
@@ -272,7 +275,7 @@ public class RaceService implements IRaceService {
     @Transactional(readOnly = true)
     public List<Race> getAllRaces() {
         log.debug("Fetching all races");
-        return raceRepository.findAll();
+        return raceRepository.findAll(); // overridden with entity graph
     }
 
     @Override
@@ -288,7 +291,7 @@ public class RaceService implements IRaceService {
         log.debug("Fetching races by status: {}", status);
         try {
             RaceStatus raceStatus = RaceStatus.valueOf(status.toUpperCase());
-            return raceRepository.findByStatus(raceStatus);
+            return raceRepository.findByStatus(raceStatus); // entity graph
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid race status: " + status);
         }
