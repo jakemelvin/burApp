@@ -13,7 +13,7 @@ public class ScoreMapper {
     ScoreResponseDto dto = new ScoreResponseDto();
     dto.setId(score.getId());
     dto.setValue(score.getValue());
-    dto.setUser(UserResponseMapper.toUserResponseDto(score.getUser()));
+    dto.setUser(score.getUser() != null ? UserResponseMapper.toUserResponseDto(score.getUser()) : null);
     return dto;
   }
 

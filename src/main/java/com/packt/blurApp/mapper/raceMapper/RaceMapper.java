@@ -113,7 +113,7 @@ public class RaceMapper {
         }
         return RaceResponseDto.AttributionDto.builder()
             .id(attribution.getId())
-            .user(UserResponseMapper.toUserResponseDto(attribution.getUser()))
+            .user(attribution.getUser() != null ? UserResponseMapper.toUserResponseDto(attribution.getUser()) : null)
             .car(toCarDto(attribution.getCar()))
             .notes(attribution.getNotes())
             .build();
