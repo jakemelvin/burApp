@@ -11,11 +11,16 @@ import com.packt.blurApp.model.User;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUserName(String userName);
-    
+
     Optional<User> findByEmail(String email);
-    
+
     boolean existsByUserName(String userName);
-    
+
     boolean existsByEmail(String email);
+
+    // Role references (both new many-to-many and legacy many-to-one)
+    java.util.List<User> findAllByRole(com.packt.blurApp.model.Role role);
+
+    java.util.List<User> findAllByRolesContains(com.packt.blurApp.model.Role role);
 
 }

@@ -7,6 +7,7 @@ import com.packt.blurApp.model.Role;
 import com.packt.blurApp.model.enums.PermissionType;
 import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.repository.RoleRepository;
+import com.packt.blurApp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.Set;
 public class RoleService implements IRoleService {
 
     private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<Role> getAll() {
@@ -30,9 +32,13 @@ public class RoleService implements IRoleService {
     @Override
     @Transactional
     public Role createRole(String name, String description, Set<PermissionType> permissions) {
-        String normalized = name != null ? name.trim().toUpperCase() : null;
+        String normalized = name != null ? name.trim().toUpperCase().replaceAll("\\s+", "_") : null;
         if (normalized == null || normalized.isBlank()) {
             throw new BadRequestException("Role name is required");
+        }
+        // Role names are used as authorities; keep them stable and machine-friendly.
+        if (!normalized.matches("[A-Z0-9_]+")) {
+            throw new BadRequestException("Invalid role name. Use letters, numbers, spaces, or underscores only.");
         }
         if (RoleNames.GREAT_ADMIN.equalsIgnoreCase(normalized)) {
             throw new BadRequestException("Cannot create GREAT_ADMIN role");
@@ -43,7 +49,7 @@ public class RoleService implements IRoleService {
         Role role = Role.builder()
                 .name(normalized)
                 .description(description)
-                .permissions(permissions)
+                .permissions(permissions != null ? permissions : java.util.Collections.emptySet())
                 .build();
         return roleRepository.save(role);
     }
@@ -66,10 +72,31 @@ public class RoleService implements IRoleService {
     public void deleteRole(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Role not found with ID: " + id));
+
         // Protect critical roles
         if (RoleNames.GREAT_ADMIN.equalsIgnoreCase(role.getName())) {
             throw new BadRequestException("Cannot delete GREAT_ADMIN role");
         }
+
+        // Detach role from all users to avoid FK constraint violations.
+        // We support both the new many-to-many (user_roles) and the legacy many-to-one (role_id).
+        var usersWithLegacyRole = userRepository.findAllByRole(role);
+        for (var u : usersWithLegacyRole) {
+            u.setRole(null);
+        }
+
+        var usersWithRoleInSet = userRepository.findAllByRolesContains(role);
+        for (var u : usersWithRoleInSet) {
+            u.getRoles().remove(role);
+        }
+
+        if (!usersWithLegacyRole.isEmpty()) {
+            userRepository.saveAll(usersWithLegacyRole);
+        }
+        if (!usersWithRoleInSet.isEmpty()) {
+            userRepository.saveAll(usersWithRoleInSet);
+        }
+
         roleRepository.delete(role);
     }
 }

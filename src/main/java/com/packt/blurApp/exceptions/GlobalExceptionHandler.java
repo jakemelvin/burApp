@@ -12,6 +12,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -131,6 +133,41 @@ public class GlobalExceptionHandler {
                 .build();
         
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        // Common case: invalid enum value sent from frontend (e.g., permissions)
+        log.error("Malformed JSON request: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
+                .message("Malformed request body")
+                .error("Bad Request")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.error("Data integrity violation: {}", ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .success(false)
+                .message("Operation violates database constraints: " + (ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage()))
+                .error("Conflict")
+                .status(HttpStatus.CONFLICT.value())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)

@@ -13,6 +13,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 @Component
@@ -24,12 +25,16 @@ public class DataInitializer implements CommandLineRunner {
     private final PartyRepository partyRepository;
     private final RaceRepository raceRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(String... args) {
         log.info("Initializing application data...");
         
+        // Repair schema constraints that Hibernate `ddl-auto=update` cannot remove.
+        repairSchemaConstraints();
+
         // Initialize roles
         initializeRoles();
         
@@ -42,6 +47,19 @@ public class DataInitializer implements CommandLineRunner {
         backfillExistingRaces();
 
         log.info("Application data initialized successfully");
+    }
+
+    private void repairSchemaConstraints() {
+        // Historically the DB had a CHECK constraint that only allowed a fixed set of role names.
+        // That prevents creating custom roles and causes 409 errors like:
+        //   violates check constraint "roles_name_check"
+        try {
+            jdbcTemplate.execute("ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_name_check");
+            log.info("Schema repair: dropped constraint roles_name_check (if it existed)");
+        } catch (Exception ex) {
+            // Don't block app startup if the constraint doesn't exist / permissions issue.
+            log.warn("Schema repair: unable to drop roles_name_check constraint: {}", ex.getMessage());
+        }
     }
 
     private void initializeRoles() {
