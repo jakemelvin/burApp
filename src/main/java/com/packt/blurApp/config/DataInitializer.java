@@ -72,28 +72,23 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Created role: GREAT_ADMIN");
         }
         
-        // Create PARTY_MANAGER role
-        if (!roleRepository.existsByName("PARTY_MANAGER")) {
-            Role partyManager = Role.createPartyManagerRole();
-            roleRepository.save(partyManager);
-            log.info("Created role: PARTY_MANAGER");
-        }
-        
-        // Create RACER role
-        if (!roleRepository.existsByName("RACER")) {
-            Role racer = Role.createRacerRole();
-            roleRepository.save(racer);
-            log.info("Created role: RACER");
-        }
-        
+        // Only GREAT_ADMIN is seeded automatically.
+        // Other roles can be managed through the admin UI.
+
         log.info("Roles initialized successfully");
+        // Note: do not seed other roles here.
+        return;
     }
 
     private void backfillExistingUsers() {
         log.info("Backfilling existing users (role + flags + timestamps)...");
 
-        Role racerRole = roleRepository.findByName("RACER")
-                .orElseThrow(() -> new RuntimeException("RACER role not found"));
+        Role racerRole = roleRepository.findByName("RACER").orElse(null);
+        if (racerRole == null) {
+            // If RACER doesn't exist (because we no longer seed it), do not auto-assign it.
+            // We'll only ensure admin has a role below.
+            log.warn("RACER role not found; skipping auto role assignment for non-admin users");
+        }
         Role greatAdminRole = roleRepository.findByName(RoleNames.GREAT_ADMIN)
                 .orElseThrow(() -> new RuntimeException("GREAT_ADMIN role not found"));
 
@@ -104,7 +99,7 @@ public class DataInitializer implements CommandLineRunner {
                 // if username is admin, make it GREAT_ADMIN, else RACER
                 if ("admin".equalsIgnoreCase(u.getUsername())) {
                     u.setRole(greatAdminRole);
-                } else {
+                } else if (racerRole != null) {
                     u.setRole(racerRole);
                 }
                 changed = true;

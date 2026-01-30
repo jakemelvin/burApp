@@ -73,6 +73,7 @@ public class Role {
                 .build();
     }
     
+    @Deprecated
     public static Role createPartyManagerRole() {
         return Role.builder()
                 .name("PARTY_MANAGER")
@@ -101,21 +102,37 @@ public class Role {
     }
     
     public static Role createRacerRole() {
+        // RACER is the main non-admin role.
+        // It includes all permissions that the old PARTY_MANAGER role used to have.
         return Role.builder()
                 .name("RACER")
-                .description("Racer can join parties and participate in races")
+                .description("Racer can create/manage parties and participate in races")
                 .permissions(Set.of(
+                    // Party
+                    PermissionType.CREATE_PARTY,
                     PermissionType.JOIN_PARTY,
+                    PermissionType.MANAGE_PARTY,
                     PermissionType.VIEW_PARTY,
+
+                    // Race
+                    PermissionType.CREATE_RACE,
+                    PermissionType.START_RACE,
                     PermissionType.JOIN_RACE,
                     PermissionType.LEAVE_RACE,
                     PermissionType.VIEW_RACE,
+                    PermissionType.DELETE_RACE,
+
+                    // Scores
                     PermissionType.SUBMIT_SCORE,
                     PermissionType.VIEW_SCORE,
+
+                    // Catalog + stats
                     PermissionType.VIEW_CARS,
                     PermissionType.VIEW_MAPS,
                     PermissionType.VIEW_STATISTICS,
                     PermissionType.VIEW_HISTORY,
+
+                    // Profile
                     PermissionType.UPDATE_OWN_PROFILE,
                     PermissionType.VIEW_OWN_PROFILE
                 ))

@@ -51,6 +51,7 @@ public class RaceMapper {
         // Map participants (use lightweight DTO to avoid recursive mapping)
         if (race.getParticipants() != null) {
             dto.setRacers(race.getParticipants().stream()
+                .filter(java.util.Objects::nonNull)
                 .map(u -> new UserMiniDto(u.getId(), u.getUsername()))
                 .collect(Collectors.toSet()));
         }
