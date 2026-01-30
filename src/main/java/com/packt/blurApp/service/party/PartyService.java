@@ -32,36 +32,43 @@ public class PartyService implements IPartyService {
     @Transactional
     public Party getTodayPartyOrCreate() {
         log.info("Getting or creating today's party");
-        
+
         LocalDate today = LocalDate.now();
         User currentUser = userService.getCurrentUser();
-        
+
         // Check if party already exists for today
         Party party = partyRepository.findByPartyDateAndActiveTrue(today)
                 .orElseGet(() -> {
                     log.info("No party exists for today. Creating new party by user: {}", currentUser.getUsername());
-                    
+
                     // Create new party - first user to arrive creates it
                     Party newParty = Party.builder()
                             .partyDate(today)
                             .creator(currentUser)
                             .active(true)
                             .build();
-                    
+
                     // Creator automatically becomes a member and manager
                     newParty.addMember(currentUser);
                     newParty.addManager(currentUser);
-                    
+
                     Party savedParty = partyRepository.save(newParty);
                     log.info("Party created successfully for date: {} by user: {}", today, currentUser.getUsername());
-                    
+
                     return savedParty;
                 });
-        
+
+        // New rule: users do NOT explicitly join parties.
+        // Being a member of the daily party is implied when they access it.
+        if (!party.isMember(currentUser)) {
+            party.addMember(currentUser);
+            partyRepository.save(party);
+        }
+
         // Initialize only what we actually expose in Party DTOs
         org.hibernate.Hibernate.initialize(party.getMembers());
         org.hibernate.Hibernate.initialize(party.getManagers());
-        
+
         return party;
     }
 

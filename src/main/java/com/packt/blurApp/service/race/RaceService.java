@@ -33,6 +33,7 @@ public class RaceService implements IRaceService {
     private final AttributionRepository attributionRepository;
     private final CarRepository carRepository;
     private final CardRepository cardRepository;
+    private final PartyRepository partyRepository;
     private final Random random = new Random();
 
     @Override
@@ -51,9 +52,11 @@ public class RaceService implements IRaceService {
         User currentUser = userService.getCurrentUser();
         Party party = partyService.getPartyById(partyId);
         
-        // Verify user is a member of the party
+        // New rule: users do NOT explicitly join parties.
+        // If a user creates a race for the daily party, they are implicitly considered a party member.
         if (!party.isMember(currentUser)) {
-            throw new ForbiddenException("Only party members can create races");
+            party.addMember(currentUser);
+            partyRepository.save(party);
         }
         
         // Select random card (map)
@@ -82,6 +85,7 @@ public class RaceService implements IRaceService {
         });
         
         // Persist race (party relationship is already set via builder)
+        // Party membership changes (party.addMember) are persisted by JPA at transaction commit.
         Race savedRace = raceRepository.save(race);
 
         // Re-fetch with entity graph so controller->mapper never triggers LazyInitializationException
@@ -105,14 +109,19 @@ public class RaceService implements IRaceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with ID: " + userId));
         
-        if (!race.getParty().isMember(user)) {
-            throw new BadRequestException("User must be a party member to join the race");
+        // New rule: racers join races (not parties). Party membership is implied.
+        // Ensure the user is a party member (so existing backend invariants still hold).
+        Party party = race.getParty();
+        if (party != null && !party.isMember(user)) {
+            party.addMember(user);
+            partyRepository.save(party);
         }
         
         if (race.isParticipant(user)) {
             throw new BadRequestException("User is already a participant in this race");
         }
         
+        // Party membership changes (party.addMember) are persisted by JPA at transaction commit.
         race.addParticipant(user);
         Race updatedRace = raceRepository.save(race);
         
@@ -153,9 +162,10 @@ public class RaceService implements IRaceService {
         User currentUser = userService.getCurrentUser();
         Race race = getRaceById(raceId);
         
-        // Only party managers can start races
-        if (!race.getParty().isManager(currentUser)) {
-            throw new ForbiddenException("Only party managers can start races");
+        // New rule: racers join a specific race (not the party).
+        // Any joined racer can start the race.
+        if (!race.isParticipant(currentUser)) {
+            throw new ForbiddenException("Only joined race participants can start the race");
         }
         
         if (race.getStatus() != RaceStatus.PENDING) {
