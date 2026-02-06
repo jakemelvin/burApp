@@ -74,4 +74,7 @@ public interface RaceRepository extends JpaRepository<Race, Long> {
     List<Race> findByStatus(RaceStatus status);
 
     List<Race> findByPartyIdAndStatus(Long partyId, RaceStatus status);
+
+    // Used to avoid repeating the same card on consecutive race creations for a party
+    java.util.Optional<Race> findTopByParty_IdOrderByIdDesc(Long partyId);
 }

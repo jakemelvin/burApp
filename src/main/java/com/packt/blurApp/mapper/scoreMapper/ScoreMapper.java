@@ -1,8 +1,6 @@
 package com.packt.blurApp.mapper.scoreMapper;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.packt.blurApp.dto.Score.ScoreResponseDto;
 import com.packt.blurApp.mapper.userMapper.UserResponseMapper;
@@ -17,11 +15,10 @@ public class ScoreMapper {
     return dto;
   }
 
-  public static Set<ScoreResponseDto> toScoreResponseDtoList(List<Score> scores) {
-    Set<ScoreResponseDto> dtoList = new HashSet<>();
-    scores.forEach(score -> {
-      dtoList.add(toScoreResponseDto(score));
-    });
-    return dtoList;
+  public static List<ScoreResponseDto> toScoreResponseDtoList(List<Score> scores) {
+    return scores.stream()
+        .sorted(java.util.Comparator.comparing(Score::getId))
+        .map(ScoreMapper::toScoreResponseDto)
+        .toList();
   }
 }

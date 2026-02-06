@@ -65,19 +65,36 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeRoles() {
         log.info("Initializing roles...");
         
-        // Create GREAT_ADMIN role
-        if (!roleRepository.existsByName(RoleNames.GREAT_ADMIN)) {
+        // Create or update GREAT_ADMIN role
+        Role existingGreatAdmin = roleRepository.findByName(RoleNames.GREAT_ADMIN).orElse(null);
+        if (existingGreatAdmin == null) {
             Role greatAdmin = Role.createGreatAdminRole();
             roleRepository.save(greatAdmin);
             log.info("Created role: GREAT_ADMIN");
+        } else {
+            // Update existing GREAT_ADMIN role with all permissions
+            Role templateRole = Role.createGreatAdminRole();
+            existingGreatAdmin.setPermissions(templateRole.getPermissions());
+            existingGreatAdmin.setDescription(templateRole.getDescription());
+            roleRepository.save(existingGreatAdmin);
+            log.info("Updated role: GREAT_ADMIN with latest permissions");
         }
         
-        // Only GREAT_ADMIN is seeded automatically.
-        // Other roles can be managed through the admin UI.
+        // Create or update RACER role as the default gameplay role.
+        Role existingRacer = roleRepository.findByName("RACER").orElse(null);
+        if (existingRacer == null) {
+            roleRepository.save(Role.createRacerRole());
+            log.info("Created role: RACER");
+        } else {
+            // Update existing RACER role with all permissions
+            Role templateRole = Role.createRacerRole();
+            existingRacer.setPermissions(templateRole.getPermissions());
+            existingRacer.setDescription(templateRole.getDescription());
+            roleRepository.save(existingRacer);
+            log.info("Updated role: RACER with latest permissions");
+        }
 
         log.info("Roles initialized successfully");
-        // Note: do not seed other roles here.
-        return;
     }
 
     private void backfillExistingUsers() {

@@ -25,7 +25,7 @@ public class PartyController {
     private final IUserService userService;
 
     @GetMapping("/today")
-    @PreAuthorize("hasAuthority('JOIN_PARTY')")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
     public ResponseEntity<ApiResponse<?>> getTodayPartyOrCreate() {
         log.info("GET ${api.prefix}/parties/today - Get or create today's party");
         Party party = partyService.getTodayPartyOrCreate();

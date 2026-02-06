@@ -3,7 +3,7 @@ package com.packt.blurApp.service.race;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +34,6 @@ public class RaceService implements IRaceService {
     private final CarRepository carRepository;
     private final CardRepository cardRepository;
     private final PartyRepository partyRepository;
-    private final Random random = new Random();
 
     @Override
     @Transactional(readOnly = true)
@@ -64,7 +63,22 @@ public class RaceService implements IRaceService {
         if (allCards.isEmpty()) {
             throw new BadRequestException("No cards available. Please add cards to the system.");
         }
-        Card randomCard = allCards.get(random.nextInt(allCards.size()));
+
+        // Avoid repeating the same card twice in a row for the same party (best effort).
+        Long lastCardId = raceRepository.findTopByParty_IdOrderByIdDesc(partyId)
+                .map(Race::getCard)
+                .map(Card::getId)
+                .orElse(null);
+
+        List<Card> selectableCards = allCards;
+        if (lastCardId != null && allCards.size() > 1) {
+            selectableCards = allCards.stream().filter(c -> !lastCardId.equals(c.getId())).toList();
+            if (selectableCards.isEmpty()) {
+                selectableCards = allCards;
+            }
+        }
+
+        Card randomCard = selectableCards.get(ThreadLocalRandom.current().nextInt(selectableCards.size()));
         
         // Create race
         Race race = Race.builder()
@@ -79,7 +93,7 @@ public class RaceService implements IRaceService {
         List<RaceParameters> allParameters = raceParametersRepository.findAll();
         allParameters.forEach(parameter -> {
             // Randomly activate parameters
-            if (random.nextBoolean()) {
+            if (ThreadLocalRandom.current().nextBoolean()) {
                 race.addRaceParameter(parameter);
             }
         });
@@ -181,7 +195,7 @@ public class RaceService implements IRaceService {
         
         // Assign random score collector from participants
         List<User> participants = new ArrayList<>(race.getParticipants());
-        User scoreCollector = participants.get(random.nextInt(participants.size()));
+        User scoreCollector = participants.get(ThreadLocalRandom.current().nextInt(participants.size()));
         race.setScoreCollector(scoreCollector);
         
         race.start();
@@ -201,7 +215,7 @@ public class RaceService implements IRaceService {
         
         if (race.getAttributionType() == AttributionType.ALL_USERS) {
             // All users get the same random car
-            Car randomCar = allCars.get(random.nextInt(allCars.size()));
+            Car randomCar = allCars.get(ThreadLocalRandom.current().nextInt(allCars.size()));
             for (User participant : race.getParticipants()) {
                 Attribution attribution = Attribution.builder()
                         .race(race)

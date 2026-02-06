@@ -61,9 +61,9 @@ public class ScoreService implements IScoreService {
             throw new BadRequestException("User is not a participant in this race");
         }
         
-        // Only the assigned score collector can submit scores
-        if (!race.getScoreCollector().equals(currentUser)) {
-            throw new ForbiddenException("Only the assigned score collector can submit scores for this race");
+        // New rule: any joined race participant can submit scores.
+        if (!race.isParticipant(currentUser)) {
+            throw new ForbiddenException("Only joined race participants can submit scores for this race");
         }
         
         // Check if score already exists for this user in this race
@@ -96,10 +96,9 @@ public class ScoreService implements IScoreService {
         User currentUser = userService.getCurrentUser();
         Score score = getScoreById(scoreId);
         
-        // Only the score collector or party managers can update scores
-        if (!score.getRace().getScoreCollector().equals(currentUser) && 
-            !score.getRace().getParty().isManager(currentUser)) {
-            throw new ForbiddenException("Only the score collector or party managers can update scores");
+        // New rule: any joined race participant can update scores.
+        if (!score.getRace().isParticipant(currentUser)) {
+            throw new ForbiddenException("Only joined race participants can update scores");
         }
         
         // Verify race is not cancelled
@@ -115,12 +114,14 @@ public class ScoreService implements IScoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Score> getScoresByUserId(Long userId) {
         log.debug("Fetching scores for user {}", userId);
         return scoreRepository.findByUserId(userId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Score getScoreByRaceIdAndUserId(Long raceId, Long userId) {
         log.debug("Fetching score for race {} and user {}", raceId, userId);
         return scoreRepository.findByRaceIdAndUserId(raceId, userId)
@@ -129,6 +130,7 @@ public class ScoreService implements IScoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Score> getScoresByRaceId(Long raceId) {
         log.debug("Fetching all scores for race {}", raceId);
         return scoreRepository.findByRaceId(raceId);
@@ -142,9 +144,9 @@ public class ScoreService implements IScoreService {
         User currentUser = userService.getCurrentUser();
         Score score = getScoreById(scoreId);
         
-        // Only party managers can delete scores
-        if (!score.getRace().getParty().isManager(currentUser)) {
-            throw new ForbiddenException("Only party managers can delete scores");
+        // New rule: any joined race participant can delete scores.
+        if (!score.getRace().isParticipant(currentUser)) {
+            throw new ForbiddenException("Only joined race participants can delete scores");
         }
         
         scoreRepository.delete(score);

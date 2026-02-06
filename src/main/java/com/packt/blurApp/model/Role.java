@@ -54,7 +54,7 @@ public class Role {
         return Role.builder()
                 .name(RoleNames.GREAT_ADMIN)
                 .description("Great Administrator with all permissions")
-                .permissions(Set.of(
+                .permissions(new HashSet<>(Set.of(
                     PermissionType.ALL_PERMISSIONS,
                     PermissionType.CREATE_USER,
                     PermissionType.UPDATE_USER,
@@ -62,11 +62,14 @@ public class Role {
                     PermissionType.VIEW_ALL_USERS,
                     PermissionType.ASSIGN_ROLES,
                     PermissionType.CREATE_PARTY,
+                    PermissionType.JOIN_PARTY,
                     PermissionType.MANAGE_PARTY,
                     PermissionType.DELETE_PARTY,
                     PermissionType.VIEW_PARTY,
                     PermissionType.CREATE_RACE,
                     PermissionType.START_RACE,
+                    PermissionType.JOIN_RACE,
+                    PermissionType.LEAVE_RACE,
                     PermissionType.DELETE_RACE,
                     PermissionType.VIEW_RACE,
                     PermissionType.SUBMIT_SCORE,
@@ -75,8 +78,10 @@ public class Role {
                     PermissionType.VIEW_CARS,
                     PermissionType.VIEW_MAPS,
                     PermissionType.VIEW_STATISTICS,
-                    PermissionType.VIEW_HISTORY
-                ))
+                    PermissionType.VIEW_HISTORY,
+                    PermissionType.UPDATE_OWN_PROFILE,
+                    PermissionType.VIEW_OWN_PROFILE
+                )))
                 .build();
     }
     
@@ -85,7 +90,7 @@ public class Role {
         return Role.builder()
                 .name("PARTY_MANAGER")
                 .description("Party Manager can create and manage parties and races")
-                .permissions(Set.of(
+                .permissions(new HashSet<>(Set.of(
                     PermissionType.CREATE_PARTY,
                     PermissionType.JOIN_PARTY,
                     PermissionType.MANAGE_PARTY,
@@ -104,7 +109,7 @@ public class Role {
                     PermissionType.VIEW_HISTORY,
                     PermissionType.UPDATE_OWN_PROFILE,
                     PermissionType.VIEW_OWN_PROFILE
-                ))
+                )))
                 .build();
     }
     
@@ -114,7 +119,7 @@ public class Role {
         return Role.builder()
                 .name("RACER")
                 .description("Racer can create/manage parties and participate in races")
-                .permissions(Set.of(
+                .permissions(new HashSet<>(Set.of(
                     // Party
                     PermissionType.CREATE_PARTY,
                     PermissionType.JOIN_PARTY,
@@ -142,7 +147,7 @@ public class Role {
                     // Profile
                     PermissionType.UPDATE_OWN_PROFILE,
                     PermissionType.VIEW_OWN_PROFILE
-                ))
+                )))
                 .build();
     }
 }
