@@ -2,7 +2,9 @@ package com.packt.blurApp.service.race;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.packt.blurApp.exceptions.BadRequestException;
 import com.packt.blurApp.exceptions.ForbiddenException;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
+import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.model.*;
 import com.packt.blurApp.model.enums.AttributionType;
 import com.packt.blurApp.model.enums.RaceStatus;
@@ -122,6 +125,11 @@ public class RaceService implements IRaceService {
         
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with ID: " + userId));
+        
+        // GREAT_ADMIN cannot participate in races - they are administrators only
+        if (user.getRole() != null && RoleNames.GREAT_ADMIN.equals(user.getRole().getName())) {
+            throw new ForbiddenException("Administrators cannot participate in races. Only racers can join.");
+        }
         
         // New rule: racers join races (not parties). Party membership is implied.
         // Ensure the user is a party member (so existing backend invariants still hold).
@@ -255,9 +263,9 @@ public class RaceService implements IRaceService {
         User currentUser = userService.getCurrentUser();
         Race race = getRaceById(raceId);
         
-        // Only party managers can complete races
-        if (!race.getParty().isManager(currentUser)) {
-            throw new ForbiddenException("Only party managers can complete races");
+        // Any joined race participant can complete the race (same rule as starting)
+        if (!race.isParticipant(currentUser)) {
+            throw new ForbiddenException("Only joined race participants can complete the race");
         }
         
         if (race.getStatus() != RaceStatus.IN_PROGRESS) {
@@ -293,6 +301,133 @@ public class RaceService implements IRaceService {
         
         log.info("Race {} cancelled successfully", raceId);
         return updatedRace;
+    }
+
+    @Override
+    @Transactional
+    public Race changeCard(Long raceId) {
+        log.info("Changing card for race {}", raceId);
+        
+        Race race = getRaceById(raceId);
+        
+        if (race.getStatus() != RaceStatus.PENDING) {
+            throw new BadRequestException("Can only change card for pending races");
+        }
+        
+        // Get all available cards
+        List<Card> allCards = cardRepository.findAll();
+        if (allCards.isEmpty()) {
+            throw new BadRequestException("No cards available in the system");
+        }
+        
+        // Avoid selecting the same card
+        Card currentCard = race.getCard();
+        List<Card> selectableCards = allCards;
+        if (currentCard != null && allCards.size() > 1) {
+            selectableCards = allCards.stream()
+                    .filter(c -> !c.getId().equals(currentCard.getId()))
+                    .toList();
+            if (selectableCards.isEmpty()) {
+                selectableCards = allCards;
+            }
+        }
+        
+        // Select random card
+        Card newCard = selectableCards.get(ThreadLocalRandom.current().nextInt(selectableCards.size()));
+        race.setCard(newCard);
+        
+        Race updatedRace = raceRepository.save(race);
+        log.info("Card changed for race {} to card {}", raceId, newCard.getId());
+        
+        return getRaceById(updatedRace.getId());
+    }
+
+    @Override
+    @Transactional
+    public Race assignCars(Long raceId) {
+        log.info("Assigning cars for race {}", raceId);
+        
+        Race race = getRaceById(raceId);
+        
+        if (race.getStatus() != RaceStatus.PENDING) {
+            throw new BadRequestException("Can only assign cars for pending races");
+        }
+        
+        List<Car> allCars = carRepository.findAll();
+        if (allCars.isEmpty()) {
+            throw new BadRequestException("No cars available in the system");
+        }
+        
+        AttributionType attributionType = race.getAttributionType();
+        if (attributionType == null) {
+            attributionType = AttributionType.PER_USER;
+        }
+        
+        if (attributionType == AttributionType.ALL_USERS) {
+            // Assign a single car to the race (global attribution) via Attribution
+            // Clear existing attributions first
+            if (race.getAttributions() != null) {
+                race.getAttributions().clear();
+            } else {
+                race.setAttributions(new HashSet<>());
+            }
+            
+            // Get current car from attributions (if any)
+            Car currentCar = race.getAttributions().stream()
+                    .filter(a -> a.getUser() == null && a.getCar() != null)
+                    .map(Attribution::getCar)
+                    .findFirst()
+                    .orElse(null);
+            
+            List<Car> selectableCars = allCars;
+            if (currentCar != null && allCars.size() > 1) {
+                selectableCars = allCars.stream()
+                        .filter(c -> !c.getId().equals(currentCar.getId()))
+                        .toList();
+                if (selectableCars.isEmpty()) {
+                    selectableCars = allCars;
+                }
+            }
+            Car newCar = selectableCars.get(ThreadLocalRandom.current().nextInt(selectableCars.size()));
+            
+            // Create global attribution (no user, just car for the race)
+            Attribution globalAttribution = Attribution.builder()
+                    .race(race)
+                    .user(null)
+                    .car(newCar)
+                    .notes("Global car for all participants")
+                    .build();
+            race.getAttributions().add(globalAttribution);
+            log.info("Assigned global car {} to race {}", newCar.getId(), raceId);
+        } else {
+            // PER_USER: Assign individual cars to each participant
+            Set<User> participants = race.getParticipants();
+            if (participants == null || participants.isEmpty()) {
+                throw new BadRequestException("No participants in the race to assign cars to");
+            }
+            
+            // Clear existing attributions
+            if (race.getAttributions() != null) {
+                race.getAttributions().clear();
+            } else {
+                race.setAttributions(new HashSet<>());
+            }
+            
+            // Assign random car to each participant
+            for (User participant : participants) {
+                Car randomCar = allCars.get(ThreadLocalRandom.current().nextInt(allCars.size()));
+                Attribution attribution = Attribution.builder()
+                        .race(race)
+                        .user(participant)
+                        .car(randomCar)
+                        .build();
+                race.getAttributions().add(attribution);
+                log.info("Assigned car {} to user {} in race {}", randomCar.getId(), participant.getId(), raceId);
+            }
+        }
+        
+        Race updatedRace = raceRepository.save(race);
+        return getRaceById(updatedRace.getId());
     }
 
     @Override

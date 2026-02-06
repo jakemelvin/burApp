@@ -118,4 +118,22 @@ public class RaceController {
         return ResponseEntity.ok(ApiResponse.success("Race cancelled successfully",
                 RaceMapper.toRaceResponseDto(race)));
     }
+
+    @PostMapping("/{raceId}/change-card")
+    @PreAuthorize("hasAuthority('START_RACE')")
+    public ResponseEntity<ApiResponse<?>> changeCard(@PathVariable Long raceId) {
+        log.info("POST ${api.prefix}/races/{}/change-card - Change race card/map", raceId);
+        Race race = raceService.changeCard(raceId);
+        return ResponseEntity.ok(ApiResponse.success("Card changed successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
+
+    @PostMapping("/{raceId}/assign-cars")
+    @PreAuthorize("hasAuthority('START_RACE')")
+    public ResponseEntity<ApiResponse<?>> assignCars(@PathVariable Long raceId) {
+        log.info("POST ${api.prefix}/races/{}/assign-cars - Assign cars to participants", raceId);
+        Race race = raceService.assignCars(raceId);
+        return ResponseEntity.ok(ApiResponse.success("Cars assigned successfully",
+                RaceMapper.toRaceResponseDto(race)));
+    }
 }

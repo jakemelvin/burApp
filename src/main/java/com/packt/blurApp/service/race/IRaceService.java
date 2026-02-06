@@ -20,6 +20,10 @@ public interface IRaceService {
     
     Race cancelRace(Long raceId);
     
+    Race changeCard(Long raceId);
+    
+    Race assignCars(Long raceId);
+    
     List<Race> getAllRaces();
     
     List<Race> getRacesByPartyId(Long partyId);
