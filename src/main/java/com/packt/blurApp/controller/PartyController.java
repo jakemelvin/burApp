@@ -5,23 +5,30 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.packt.blurApp.dto.Party.AddPartyMemberDto;
+import com.packt.blurApp.dto.Party.PartyMemberDto;
+import com.packt.blurApp.dto.Party.UpdatePartyMemberRoleDto;
 import com.packt.blurApp.mapper.partyMapper.PartyMapper;
 import com.packt.blurApp.model.Party;
+import com.packt.blurApp.model.enums.PartyRole;
 import com.packt.blurApp.response.ApiResponse;
-import com.packt.blurApp.service.party.IPartyService;
+import com.packt.blurApp.service.party.PartyService;
 import com.packt.blurApp.service.user.IUserService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
 @RequestMapping("${api.prefix}/parties")
 @RequiredArgsConstructor
 public class PartyController {
-    private final IPartyService partyService;
+    private final PartyService partyService;
     private final IUserService userService;
 
     @GetMapping("/today")
@@ -122,5 +129,122 @@ public class PartyController {
         log.info("DELETE ${api.prefix}/parties/{} - Deactivate party", partyId);
         partyService.deactivateParty(partyId);
         return ResponseEntity.ok(ApiResponse.success("Party deactivated successfully"));
+    }
+
+    // ==================== PARTY MEMBER MANAGEMENT ENDPOINTS ====================
+
+    /**
+     * Get all party members with their roles
+     */
+    @GetMapping("/{partyId}/members/roles")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
+    public ResponseEntity<ApiResponse<?>> getPartyMembersWithRoles(@PathVariable Long partyId) {
+        log.info("GET /parties/{}/members/roles - Get party members with roles", partyId);
+        List<PartyMemberDto> members = partyService.getPartyMembersWithRoles(partyId);
+        return ResponseEntity.ok(ApiResponse.success("Party members fetched successfully", members));
+    }
+
+    /**
+     * Add a new member to the party
+     */
+    @PostMapping("/{partyId}/members")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> addPartyMember(
+            @PathVariable Long partyId,
+            @Valid @RequestBody AddPartyMemberDto dto) {
+        log.info("POST /parties/{}/members - Add member to party", partyId);
+        PartyMemberDto member = partyService.addPartyMember(partyId, dto);
+        return ResponseEntity.ok(ApiResponse.success("Member added successfully", member));
+    }
+
+    /**
+     * Update a member's role (promote to CO_HOST or demote to PARTICIPANT)
+     */
+    @PatchMapping("/{partyId}/members/{userId}/role")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> updateMemberRole(
+            @PathVariable Long partyId,
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdatePartyMemberRoleDto dto) {
+        log.info("PATCH /parties/{}/members/{}/role - Update member role", partyId, userId);
+        PartyMemberDto member = partyService.updateMemberRole(partyId, userId, dto);
+        return ResponseEntity.ok(ApiResponse.success("Member role updated successfully", member));
+    }
+
+    /**
+     * Remove a member from the party
+     */
+    @DeleteMapping("/{partyId}/members/{userId}")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> removeMember(
+            @PathVariable Long partyId,
+            @PathVariable Long userId) {
+        log.info("DELETE /parties/{}/members/{} - Remove member from party", partyId, userId);
+        partyService.removeMember(partyId, userId);
+        return ResponseEntity.ok(ApiResponse.success("Member removed successfully"));
+    }
+
+    /**
+     * Transfer party ownership to another member (HOST only)
+     */
+    @PostMapping("/{partyId}/transfer-ownership/{newHostId}")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> transferOwnership(
+            @PathVariable Long partyId,
+            @PathVariable Long newHostId) {
+        log.info("POST /parties/{}/transfer-ownership/{} - Transfer ownership", partyId, newHostId);
+        PartyMemberDto newHost = partyService.transferOwnership(partyId, newHostId);
+        return ResponseEntity.ok(ApiResponse.success("Ownership transferred successfully", newHost));
+    }
+
+    /**
+     * Check if current user can manage the party
+     */
+    @GetMapping("/{partyId}/can-manage")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
+    public ResponseEntity<ApiResponse<?>> canCurrentUserManageParty(@PathVariable Long partyId) {
+        log.info("GET /parties/{}/can-manage - Check if user can manage party", partyId);
+        boolean canManage = partyService.canCurrentUserManageParty(partyId);
+        return ResponseEntity.ok(ApiResponse.success("Permission check successful", Map.of("canManage", canManage)));
+    }
+
+    /**
+     * Get current user's role in the party
+     */
+    @GetMapping("/{partyId}/my-role")
+    @PreAuthorize("hasAuthority('VIEW_PARTY')")
+    public ResponseEntity<ApiResponse<?>> getCurrentUserRole(@PathVariable Long partyId) {
+        log.info("GET /parties/{}/my-role - Get current user's role in party", partyId);
+        PartyRole role = partyService.getCurrentUserRole(partyId);
+        return ResponseEntity.ok(ApiResponse.success("Role fetched successfully", 
+                Map.of("role", role != null ? role.name() : "NOT_MEMBER")));
+    }
+
+    /**
+     * Promote a member to co-host (convenience endpoint)
+     */
+    @PostMapping("/{partyId}/co-hosts/{userId}")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> promoteToCoHost(
+            @PathVariable Long partyId,
+            @PathVariable Long userId) {
+        log.info("POST /parties/{}/co-hosts/{} - Promote to co-host", partyId, userId);
+        Party party = partyService.assignManager(partyId, userId);
+        return ResponseEntity.ok(ApiResponse.success("User promoted to co-host successfully",
+                PartyMapper.toPartyGetResponseDto(party)));
+    }
+
+    /**
+     * Demote a co-host to participant (convenience endpoint)
+     */
+    @DeleteMapping("/{partyId}/co-hosts/{userId}")
+    @PreAuthorize("hasAuthority('MANAGE_PARTY')")
+    public ResponseEntity<ApiResponse<?>> demoteCoHost(
+            @PathVariable Long partyId,
+            @PathVariable Long userId) {
+        log.info("DELETE /parties/{}/co-hosts/{} - Demote co-host", partyId, userId);
+        Party party = partyService.removeManager(partyId, userId);
+        return ResponseEntity.ok(ApiResponse.success("Co-host demoted to participant successfully",
+                PartyMapper.toPartyGetResponseDto(party)));
     }
 }

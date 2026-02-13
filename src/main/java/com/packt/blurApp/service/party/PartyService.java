@@ -2,16 +2,24 @@ package com.packt.blurApp.service.party;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.packt.blurApp.dto.Party.AddPartyMemberDto;
+import com.packt.blurApp.dto.Party.PartyMemberDto;
+import com.packt.blurApp.dto.Party.UpdatePartyMemberRoleDto;
 import com.packt.blurApp.exceptions.BadRequestException;
 import com.packt.blurApp.exceptions.ConflictException;
 import com.packt.blurApp.exceptions.ForbiddenException;
 import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.model.Party;
+import com.packt.blurApp.model.PartyMember;
 import com.packt.blurApp.model.User;
+import com.packt.blurApp.model.enums.PartyRole;
+import com.packt.blurApp.repository.PartyMemberRepository;
 import com.packt.blurApp.repository.PartyRepository;
 import com.packt.blurApp.repository.UserRepository;
 import com.packt.blurApp.service.user.IUserService;
@@ -25,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PartyService implements IPartyService {
 
     private final PartyRepository partyRepository;
+    private final PartyMemberRepository partyMemberRepository;
     private final UserRepository userRepository;
     private final IUserService userService;
 
@@ -48,26 +57,34 @@ public class PartyService implements IPartyService {
                             .active(true)
                             .build();
 
-                    // Creator automatically becomes a member and manager
-                    newParty.addMember(currentUser);
-                    newParty.addManager(currentUser);
-
                     Party savedParty = partyRepository.save(newParty);
+
+                    // Creator automatically becomes HOST
+                    PartyMember hostMember = PartyMember.builder()
+                            .party(savedParty)
+                            .user(currentUser)
+                            .role(PartyRole.HOST)
+                            .build();
+                    partyMemberRepository.save(hostMember);
+                    
                     log.info("Party created successfully for date: {} by user: {}", today, currentUser.getUsername());
 
                     return savedParty;
                 });
 
-        // New rule: users do NOT explicitly join parties.
-        // Being a member of the daily party is implied when they access it.
-        if (!party.isMember(currentUser)) {
-            party.addMember(currentUser);
-            partyRepository.save(party);
+        // Auto-join: users become PARTICIPANT when they access the party
+        if (!partyMemberRepository.existsByPartyAndUser(party, currentUser)) {
+            PartyMember participantMember = PartyMember.builder()
+                    .party(party)
+                    .user(currentUser)
+                    .role(PartyRole.PARTICIPANT)
+                    .build();
+            partyMemberRepository.save(participantMember);
+            log.info("User {} auto-joined party {} as PARTICIPANT", currentUser.getUsername(), party.getId());
         }
 
-        // Initialize only what we actually expose in Party DTOs
-        org.hibernate.Hibernate.initialize(party.getMembers());
-        org.hibernate.Hibernate.initialize(party.getManagers());
+        // Initialize party members for DTO mapping
+        org.hibernate.Hibernate.initialize(party.getPartyMembers());
 
         return party;
     }
@@ -79,9 +96,8 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Party not found with ID: " + id));
         
-        // Initialize only what we actually expose in Party DTOs
-        org.hibernate.Hibernate.initialize(party.getMembers());
-        org.hibernate.Hibernate.initialize(party.getManagers());
+        // Initialize party members for DTO mapping
+        org.hibernate.Hibernate.initialize(party.getPartyMembers());
         
         return party;
     }
@@ -93,9 +109,8 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findByPartyDate(date)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("No party found for date: " + date));
         
-        // Initialize only what we actually expose in Party DTOs
-        org.hibernate.Hibernate.initialize(party.getMembers());
-        org.hibernate.Hibernate.initialize(party.getManagers());
+        // Initialize party members for DTO mapping
+        org.hibernate.Hibernate.initialize(party.getPartyMembers());
         
         return party;
     }
@@ -106,10 +121,9 @@ public class PartyService implements IPartyService {
         log.debug("Fetching all parties");
         List<Party> parties = partyRepository.findAll();
         
-        // Initialize only what we actually expose in Party DTOs
+        // Initialize party members for DTO mapping
         parties.forEach(party -> {
-            org.hibernate.Hibernate.initialize(party.getMembers());
-            org.hibernate.Hibernate.initialize(party.getManagers());
+            org.hibernate.Hibernate.initialize(party.getPartyMembers());
         });
         
         return parties;
@@ -126,15 +140,20 @@ public class PartyService implements IPartyService {
             throw new BadRequestException("Cannot join inactive party");
         }
         
-        if (party.isMember(user)) {
+        if (partyMemberRepository.existsByPartyAndUser(party, user)) {
             throw new ConflictException("User is already a member of this party");
         }
         
-        party.addMember(user);
-        Party updatedParty = partyRepository.save(party);
+        PartyMember newMember = PartyMember.builder()
+                .party(party)
+                .user(user)
+                .role(PartyRole.PARTICIPANT)
+                .invitedBy(userService.getCurrentUser())
+                .build();
+        partyMemberRepository.save(newMember);
         
-        log.info("User {} joined party {} successfully", user.getUsername(), partyId);
-        return updatedParty;
+        log.info("User {} joined party {} successfully as PARTICIPANT", user.getUsername(), partyId);
+        return getPartyById(partyId); // Refresh to get updated members
     }
 
     @Override
@@ -144,89 +163,86 @@ public class PartyService implements IPartyService {
         
         Party party = getPartyById(partyId);
         
-        if (!party.isMember(user)) {
-            throw new BadRequestException("User is not a member of this party");
+        PartyMember membership = partyMemberRepository.findByPartyAndUser(party, user)
+                .orElseThrow(() -> new BadRequestException("User is not a member of this party"));
+        
+        // Host cannot leave their own party
+        if (membership.isHost()) {
+            throw new ForbiddenException("Party host cannot leave the party. Transfer ownership first or deactivate the party.");
         }
         
-        // Creator cannot leave their own party
-        if (party.getCreator().equals(user)) {
-            throw new ForbiddenException("Party creator cannot leave the party");
-        }
-        
-        party.removeMember(user);
-        
-        // Also remove from managers if they were one
-        if (party.isManager(user)) {
-            party.removeManager(user);
-        }
-        
-        Party updatedParty = partyRepository.save(party);
+        partyMemberRepository.delete(membership);
         
         log.info("User {} left party {} successfully", user.getUsername(), partyId);
-        return updatedParty;
+        return getPartyById(partyId);
     }
 
     @Override
     @Transactional
     public Party assignManager(Long partyId, Long userId) {
-        log.info("Assigning user {} as manager of party {}", userId, partyId);
+        log.info("Assigning user {} as co-host of party {}", userId, partyId);
         
         User currentUser = userService.getCurrentUser();
         Party party = getPartyById(partyId);
         
-        // Only creator or existing managers can assign new managers
-        if (!party.isManager(currentUser)) {
-            throw new ForbiddenException("Only party managers can assign new managers");
+        // Only host can assign co-hosts
+        if (!party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the party host can assign co-hosts");
         }
         
-        User userToPromote = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with ID: " + userId));
+        PartyMember memberToPromote = partyMemberRepository.findByPartyIdAndUserId(partyId, userId)
+                .orElseThrow(() -> new BadRequestException("User must be a party member to become a co-host"));
         
-        if (!party.isMember(userToPromote)) {
-            throw new BadRequestException("User must be a party member to become a manager");
+        if (memberToPromote.isHost()) {
+            throw new BadRequestException("Cannot change host's role");
         }
         
-        if (party.isManager(userToPromote)) {
-            throw new ConflictException("User is already a manager of this party");
+        if (memberToPromote.isCoHost()) {
+            throw new ConflictException("User is already a co-host of this party");
         }
         
-        party.addManager(userToPromote);
-        Party updatedParty = partyRepository.save(party);
+        memberToPromote.setRole(PartyRole.CO_HOST);
+        partyMemberRepository.save(memberToPromote);
         
-        log.info("User {} assigned as manager of party {}", userId, partyId);
-        return updatedParty;
+        log.info("User {} assigned as CO_HOST of party {}", userId, partyId);
+        return getPartyById(partyId);
     }
 
     @Override
     @Transactional
     public Party removeManager(Long partyId, Long userId) {
-        log.info("Removing user {} as manager of party {}", userId, partyId);
+        log.info("Removing user {} as co-host of party {}", userId, partyId);
         
         User currentUser = userService.getCurrentUser();
         Party party = getPartyById(partyId);
         
-        // Only creator can remove managers
-        if (!party.getCreator().equals(currentUser)) {
-            throw new ForbiddenException("Only party creator can remove managers");
+        // Only host can remove co-hosts
+        if (!party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the party host can remove co-hosts");
         }
         
-        User userToDemote = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with ID: " + userId));
+        PartyMember memberToDemote = partyMemberRepository.findByPartyIdAndUserId(partyId, userId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found in this party"));
         
-        // Cannot remove creator as manager
-        if (party.getCreator().equals(userToDemote)) {
-            throw new BadRequestException("Cannot remove creator as manager");
+        // Cannot demote host
+        if (memberToDemote.isHost()) {
+            throw new BadRequestException("Cannot demote the host");
         }
         
-        if (!party.isManager(userToDemote)) {
-            throw new BadRequestException("User is not a manager of this party");
+        if (!memberToDemote.isCoHost()) {
+            throw new BadRequestException("User is not a co-host of this party");
         }
         
-        party.removeManager(userToDemote);
-        Party updatedParty = partyRepository.save(party);
+        memberToDemote.setRole(PartyRole.PARTICIPANT);
+        partyMemberRepository.save(memberToDemote);
         
-        log.info("User {} removed as manager of party {}", userId, partyId);
-        return updatedParty;
+        log.info("User {} demoted to PARTICIPANT in party {}", userId, partyId);
+        return getPartyById(partyId);
+    }
+    
+    // Helper method to check if user is GREAT_ADMIN
+    private boolean isGreatAdmin(User user) {
+        return user.getRole() != null && "GREAT_ADMIN".equals(user.getRole().getName());
     }
 
     @Override
@@ -237,9 +253,9 @@ public class PartyService implements IPartyService {
         User currentUser = userService.getCurrentUser();
         Party party = getPartyById(partyId);
         
-        // Only creator can deactivate party
-        if (!party.getCreator().equals(currentUser)) {
-            throw new ForbiddenException("Only party creator can deactivate the party");
+        // Only host or GREAT_ADMIN can deactivate party
+        if (!party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only party host can deactivate the party");
         }
         
         party.setActive(false);
@@ -282,9 +298,216 @@ public class PartyService implements IPartyService {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.Set<User> getPartyMembers(Long partyId) {
+    public Set<User> getPartyMembers(Long partyId) {
         Party party = getPartyById(partyId);
-        org.hibernate.Hibernate.initialize(party.getMembers());
         return party.getMembers();
+    }
+    
+    // ==================== NEW METHODS FOR PARTY MEMBER MANAGEMENT ====================
+    
+    /**
+     * Get all party members with their roles
+     */
+    @Transactional(readOnly = true)
+    public List<PartyMemberDto> getPartyMembersWithRoles(Long partyId) {
+        log.debug("Fetching party members with roles for party {}", partyId);
+        
+        List<PartyMember> members = partyMemberRepository.findByPartyId(partyId);
+        
+        return members.stream()
+                .map(this::toPartyMemberDto)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Add a new member to the party
+     */
+    @Transactional
+    public PartyMemberDto addPartyMember(Long partyId, AddPartyMemberDto dto) {
+        log.info("Adding user {} to party {} with role {}", dto.getUserId(), partyId, dto.getRole());
+        
+        User currentUser = userService.getCurrentUser();
+        Party party = getPartyById(partyId);
+        
+        // Only host or co-hosts can add members
+        if (!party.canManage(currentUser)) {
+            throw new ForbiddenException("Only party managers can add members");
+        }
+        
+        // Cannot assign HOST role - only one host per party
+        if (dto.getRole() == PartyRole.HOST) {
+            throw new BadRequestException("Cannot assign HOST role. Use transfer ownership instead.");
+        }
+        
+        User userToAdd = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with ID: " + dto.getUserId()));
+        
+        if (partyMemberRepository.existsByPartyAndUser(party, userToAdd)) {
+            throw new ConflictException("User is already a member of this party");
+        }
+        
+        // Only host can add co-hosts
+        if (dto.getRole() == PartyRole.CO_HOST && !party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the party host can add co-hosts");
+        }
+        
+        PartyMember newMember = PartyMember.builder()
+                .party(party)
+                .user(userToAdd)
+                .role(dto.getRole() != null ? dto.getRole() : PartyRole.PARTICIPANT)
+                .invitedBy(currentUser)
+                .build();
+        
+        PartyMember savedMember = partyMemberRepository.save(newMember);
+        log.info("User {} added to party {} as {}", dto.getUserId(), partyId, savedMember.getRole());
+        
+        return toPartyMemberDto(savedMember);
+    }
+    
+    /**
+     * Update a member's role
+     */
+    @Transactional
+    public PartyMemberDto updateMemberRole(Long partyId, Long userId, UpdatePartyMemberRoleDto dto) {
+        log.info("Updating role for user {} in party {} to {}", userId, partyId, dto.getRole());
+        
+        User currentUser = userService.getCurrentUser();
+        Party party = getPartyById(partyId);
+        
+        // Only host can change roles
+        if (!party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the party host can change member roles");
+        }
+        
+        PartyMember member = partyMemberRepository.findByPartyIdAndUserId(partyId, userId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions("Member not found in this party"));
+        
+        // Cannot change host's role
+        if (member.isHost()) {
+            throw new BadRequestException("Cannot change host's role. Use transfer ownership instead.");
+        }
+        
+        // Cannot assign HOST role
+        if (dto.getRole() == PartyRole.HOST) {
+            throw new BadRequestException("Cannot assign HOST role. Use transfer ownership instead.");
+        }
+        
+        member.setRole(dto.getRole());
+        PartyMember updatedMember = partyMemberRepository.save(member);
+        
+        log.info("User {} role updated to {} in party {}", userId, dto.getRole(), partyId);
+        return toPartyMemberDto(updatedMember);
+    }
+    
+    /**
+     * Remove a member from the party
+     */
+    @Transactional
+    public void removeMember(Long partyId, Long userId) {
+        log.info("Removing user {} from party {}", userId, partyId);
+        
+        User currentUser = userService.getCurrentUser();
+        Party party = getPartyById(partyId);
+        
+        // Only host or co-hosts can remove members
+        if (!party.canManage(currentUser)) {
+            throw new ForbiddenException("Only party managers can remove members");
+        }
+        
+        PartyMember member = partyMemberRepository.findByPartyIdAndUserId(partyId, userId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions("Member not found in this party"));
+        
+        // Cannot remove host
+        if (member.isHost()) {
+            throw new BadRequestException("Cannot remove the host from the party");
+        }
+        
+        // Co-hosts can only remove participants, not other co-hosts
+        if (member.isCoHost() && !party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the host can remove co-hosts");
+        }
+        
+        partyMemberRepository.delete(member);
+        log.info("User {} removed from party {}", userId, partyId);
+    }
+    
+    /**
+     * Transfer party ownership to another member
+     */
+    @Transactional
+    public PartyMemberDto transferOwnership(Long partyId, Long newHostId) {
+        log.info("Transferring ownership of party {} to user {}", partyId, newHostId);
+        
+        User currentUser = userService.getCurrentUser();
+        Party party = getPartyById(partyId);
+        
+        // Only current host or GREAT_ADMIN can transfer ownership
+        if (!party.isHost(currentUser) && !isGreatAdmin(currentUser)) {
+            throw new ForbiddenException("Only the party host can transfer ownership");
+        }
+        
+        PartyMember newHost = partyMemberRepository.findByPartyIdAndUserId(partyId, newHostId)
+                .orElseThrow(() -> new BadRequestException("User must be a party member to become host"));
+        
+        if (newHost.isHost()) {
+            throw new BadRequestException("User is already the host");
+        }
+        
+        // Find current host and demote to co-host
+        PartyMember currentHost = partyMemberRepository.findHostByPartyId(partyId)
+                .orElse(null);
+        
+        if (currentHost != null) {
+            currentHost.setRole(PartyRole.CO_HOST);
+            partyMemberRepository.save(currentHost);
+        }
+        
+        // Promote new host
+        newHost.setRole(PartyRole.HOST);
+        PartyMember savedNewHost = partyMemberRepository.save(newHost);
+        
+        // Update party creator reference
+        party.setCreator(newHost.getUser());
+        partyRepository.save(party);
+        
+        log.info("Ownership of party {} transferred to user {}", partyId, newHostId);
+        return toPartyMemberDto(savedNewHost);
+    }
+    
+    /**
+     * Check if current user can manage the party
+     */
+    @Transactional(readOnly = true)
+    public boolean canCurrentUserManageParty(Long partyId) {
+        User currentUser = userService.getCurrentUser();
+        if (isGreatAdmin(currentUser)) {
+            return true;
+        }
+        return partyMemberRepository.canUserManageParty(partyId, currentUser.getId());
+    }
+    
+    /**
+     * Get current user's role in the party
+     */
+    @Transactional(readOnly = true)
+    public PartyRole getCurrentUserRole(Long partyId) {
+        User currentUser = userService.getCurrentUser();
+        return partyMemberRepository.findByPartyIdAndUserId(partyId, currentUser.getId())
+                .map(PartyMember::getRole)
+                .orElse(null);
+    }
+    
+    // Helper method to convert PartyMember to DTO
+    private PartyMemberDto toPartyMemberDto(PartyMember member) {
+        return PartyMemberDto.builder()
+                .id(member.getId())
+                .partyId(member.getParty().getId())
+                .userId(member.getUser().getId())
+                .userName(member.getUser().getUsername())
+                .role(member.getRole())
+                .invitedById(member.getInvitedBy() != null ? member.getInvitedBy().getId() : null)
+                .invitedByName(member.getInvitedBy() != null ? member.getInvitedBy().getUsername() : null)
+                .joinedAt(member.getJoinedAt())
+                .build();
     }
 }

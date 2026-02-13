@@ -4,12 +4,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.packt.blurApp.model.enums.PartyRole;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -23,7 +24,7 @@ import lombok.ToString;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"creator", "members", "managers", "races"})
+@ToString(exclude = {"creator", "partyMembers", "races"})
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "party")
@@ -45,23 +46,10 @@ public class Party {
     @JoinColumn(name = "creator_id", nullable = true)
     private User creator;
     
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "party_members",
-        joinColumns = @JoinColumn(name = "party_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
+    // New: PartyMember relationship for role-based management
+    @OneToMany(mappedBy = "party", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<User> members = new HashSet<>();
-    
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "party_managers",
-        joinColumns = @JoinColumn(name = "party_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @Builder.Default
-    private Set<User> managers = new HashSet<>();
+    private Set<PartyMember> partyMembers = new HashSet<>();
     
     @OneToMany(mappedBy = "party", cascade = CascadeType.ALL, orphanRemoval = true)
     @OnDelete(action = OnDeleteAction.CASCADE)
@@ -82,7 +70,7 @@ public class Party {
         }
     }
 
-    // Helper methods
+    // Helper methods for races
     public void addRace(Race race) {
         races.add(race);
         race.setParty(this);
@@ -93,28 +81,91 @@ public class Party {
         race.setParty(null);
     }
     
-    public void addMember(User user) {
-        members.add(user);
+    // Helper methods for party members
+    public void addPartyMember(PartyMember partyMember) {
+        partyMembers.add(partyMember);
+        partyMember.setParty(this);
     }
     
-    public void removeMember(User user) {
-        members.remove(user);
+    public void removePartyMember(PartyMember partyMember) {
+        partyMembers.remove(partyMember);
+        partyMember.setParty(null);
     }
     
-    public void addManager(User user) {
-        managers.add(user);
+    // Get all members (users) regardless of role
+    public Set<User> getMembers() {
+        return partyMembers.stream()
+                .map(PartyMember::getUser)
+                .collect(Collectors.toSet());
     }
     
-    public void removeManager(User user) {
-        managers.remove(user);
+    // Get host (creator)
+    public User getHost() {
+        return partyMembers.stream()
+                .filter(PartyMember::isHost)
+                .map(PartyMember::getUser)
+                .findFirst()
+                .orElse(creator); // Fallback to legacy creator field
     }
     
+    // Get all co-hosts
+    public Set<User> getCoHosts() {
+        return partyMembers.stream()
+                .filter(PartyMember::isCoHost)
+                .map(PartyMember::getUser)
+                .collect(Collectors.toSet());
+    }
+    
+    // Get all managers (host + co-hosts)
+    public Set<User> getManagers() {
+        return partyMembers.stream()
+                .filter(PartyMember::canManageParty)
+                .map(PartyMember::getUser)
+                .collect(Collectors.toSet());
+    }
+    
+    // Get participants only (non-managers)
+    public Set<User> getParticipants() {
+        return partyMembers.stream()
+                .filter(PartyMember::isParticipant)
+                .map(PartyMember::getUser)
+                .collect(Collectors.toSet());
+    }
+    
+    // Check if user is a member of the party
     public boolean isMember(User user) {
-        return members.contains(user);
+        return partyMembers.stream()
+                .anyMatch(pm -> pm.getUser().equals(user));
     }
     
-    public boolean isManager(User user) {
-        return managers.contains(user) || (creator != null && creator.equals(user));
+    // Check if user can manage the party (host or co-host)
+    public boolean canManage(User user) {
+        // GREAT_ADMIN can always manage
+        if (user.getRole() != null && "GREAT_ADMIN".equals(user.getRole().getName())) {
+            return true;
+        }
+        return partyMembers.stream()
+                .anyMatch(pm -> pm.getUser().equals(user) && pm.canManageParty());
+    }
+    
+    // Check if user is the host
+    public boolean isHost(User user) {
+        return partyMembers.stream()
+                .anyMatch(pm -> pm.getUser().equals(user) && pm.isHost());
+    }
+    
+    // Check if user is a co-host
+    public boolean isCoHost(User user) {
+        return partyMembers.stream()
+                .anyMatch(pm -> pm.getUser().equals(user) && pm.isCoHost());
+    }
+    
+    // Get the PartyMember for a specific user
+    public PartyMember getPartyMember(User user) {
+        return partyMembers.stream()
+                .filter(pm -> pm.getUser().equals(user))
+                .findFirst()
+                .orElse(null);
     }
 
     public boolean isActive() {
