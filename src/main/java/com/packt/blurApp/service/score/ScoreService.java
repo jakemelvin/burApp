@@ -71,12 +71,28 @@ public class ScoreService implements IScoreService {
             throw new ConflictException("Score already exists for this user in this race. Use update instead.");
         }
         
+        // Calculate score based on rank: points = maxParticipants - rank + 1
+        int maxParticipants = race.getParticipants().size();
+        int rank = addScoreDto.getValue();
+        
+        // Validate rank is within valid bounds (1 to maxParticipants)
+        if (rank < 1) {
+            throw new BadRequestException("Le rang doit être au minimum 1");
+        }
+        if (rank > maxParticipants) {
+            throw new BadRequestException(
+                String.format("Le rang doit être au maximum %d (nombre de participants)", maxParticipants));
+        }
+        
+        int calculatedPoints = maxParticipants - rank + 1;
+        
         // Create score
         Score score = Score.builder()
                 .race(race)
                 .user(scoreUser)
                 .submittedBy(currentUser)
-                .value(addScoreDto.getValue())
+                .value(calculatedPoints)
+                .rank(rank)
                 .build();
         
         Score savedScore = scoreRepository.save(score);
@@ -106,10 +122,26 @@ public class ScoreService implements IScoreService {
             throw new BadRequestException("Cannot update scores for cancelled races");
         }
         
-        score.setValue(updateScoreDto.getValue());
+        // Calculate score based on rank: points = maxParticipants - rank + 1
+        int maxParticipants = score.getRace().getParticipants().size();
+        int rank = updateScoreDto.getValue();
+        
+        // Validate rank is within valid bounds (1 to maxParticipants)
+        if (rank < 1) {
+            throw new BadRequestException("Le rang doit être au minimum 1");
+        }
+        if (rank > maxParticipants) {
+            throw new BadRequestException(
+                String.format("Le rang doit être au maximum %d (nombre de participants)", maxParticipants));
+        }
+        
+        int calculatedPoints = maxParticipants - rank + 1;
+        
+        score.setValue(calculatedPoints);
+        score.setRank(rank);
         Score updatedScore = scoreRepository.save(score);
         
-        log.info("Score {} updated successfully to {} points", scoreId, updateScoreDto.getValue());
+        log.info("Score {} updated successfully to {} points (rank: {})", scoreId, calculatedPoints, rank);
         return updatedScore;
     }
 

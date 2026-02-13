@@ -32,6 +32,9 @@ public class Score {
     @Column(nullable = false)
     private Integer value;
     
+    @Column(nullable = true)
+    private Integer rank;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "race_id", nullable = false)
     private Race race;

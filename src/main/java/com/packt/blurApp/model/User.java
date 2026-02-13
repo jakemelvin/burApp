@@ -99,12 +99,9 @@ public class User implements UserDetails {
     @Builder.Default
     private Set<Score> scores = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(
-        name = "user_race_participation", 
-        joinColumns = @JoinColumn(name = "user_id"), 
-        inverseJoinColumns = @JoinColumn(name = "race_id")
-    )
+    // Note: Race participation is managed from Race.participants side (race_participants table)
+    // This is the inverse side of the relationship - do not use a separate join table
+    @ManyToMany(mappedBy = "participants")
     @Builder.Default
     private Set<Race> races = new HashSet<>();
 

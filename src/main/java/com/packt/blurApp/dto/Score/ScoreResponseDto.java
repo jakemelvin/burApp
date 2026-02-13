@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class ScoreResponseDto {
   private Long id;
   private int value;
+  private int rank;
   private UserResponseDto user;
 }

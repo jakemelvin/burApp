@@ -93,13 +93,24 @@ public class RaceService implements IRaceService {
                 .build();
         
         // Add race parameters (setup automatically)
+        // Randomly select between 0 and ALL available parameters with equal probability
         List<RaceParameters> allParameters = raceParametersRepository.findAll();
-        allParameters.forEach(parameter -> {
-            // Randomly activate parameters
-            if (ThreadLocalRandom.current().nextBoolean()) {
-                race.addRaceParameter(parameter);
+        if (!allParameters.isEmpty()) {
+            // Shuffle the parameters list to randomize selection order
+            List<RaceParameters> shuffledParameters = new ArrayList<>(allParameters);
+            Collections.shuffle(shuffledParameters);
+            
+            // Randomly determine how many parameters to select (0 to allParameters.size(), inclusive)
+            // Each count has equal probability
+            int parameterCount = ThreadLocalRandom.current().nextInt(allParameters.size() + 1);
+            
+            // Add the selected number of parameters
+            for (int i = 0; i < parameterCount; i++) {
+                race.addRaceParameter(shuffledParameters.get(i));
             }
-        });
+            
+            log.debug("Selected {} race parameters out of {} available", parameterCount, allParameters.size());
+        }
         
         // Persist race (party relationship is already set via builder)
         // Party membership changes (party.addMember) are persisted by JPA at transaction commit.
