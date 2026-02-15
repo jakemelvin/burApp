@@ -263,15 +263,19 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Checking for default admin user...");
         
         String defaultAdminUsername = "admin";
+        String defaultPassword = "admin123";
         
-        if (!userRepository.existsByUserName(defaultAdminUsername)) {
-            Role greatAdminRole = roleRepository.findByName(RoleNames.GREAT_ADMIN)
-                    .orElseThrow(() -> new RuntimeException("GREAT_ADMIN role not found"));
-            
+        Role greatAdminRole = roleRepository.findByName(RoleNames.GREAT_ADMIN)
+                .orElseThrow(() -> new RuntimeException("GREAT_ADMIN role not found"));
+        
+        var existingAdmin = userRepository.findByUserName(defaultAdminUsername);
+        
+        if (existingAdmin.isEmpty()) {
+            // Create new admin user
             User admin = User.builder()
                     .userName(defaultAdminUsername)
                     .email("admin@blurapp.com")
-                    .password(passwordEncoder.encode("admin123"))
+                    .password(passwordEncoder.encode(defaultPassword))
                     .role(greatAdminRole)
                     .enabled(true)
                     .accountNonExpired(true)
@@ -283,7 +287,50 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Default admin user created: username='{}', password='admin123'", defaultAdminUsername);
             log.warn("IMPORTANT: Please change the default admin password after first login!");
         } else {
-            log.info("Default admin user already exists");
+            // Update existing admin user to ensure it has the correct role and account status
+            User admin = existingAdmin.get();
+            boolean updated = false;
+            
+            if (admin.getRole() == null || !RoleNames.GREAT_ADMIN.equals(admin.getRole().getName())) {
+                admin.setRole(greatAdminRole);
+                updated = true;
+                log.info("Updated admin user role to GREAT_ADMIN");
+            }
+            
+            if (!Boolean.TRUE.equals(admin.getEnabled())) {
+                admin.setEnabled(true);
+                updated = true;
+            }
+            
+            if (!Boolean.TRUE.equals(admin.getAccountNonExpired())) {
+                admin.setAccountNonExpired(true);
+                updated = true;
+            }
+            
+            if (!Boolean.TRUE.equals(admin.getAccountNonLocked())) {
+                admin.setAccountNonLocked(true);
+                updated = true;
+            }
+            
+            if (!Boolean.TRUE.equals(admin.getCredentialsNonExpired())) {
+                admin.setCredentialsNonExpired(true);
+                updated = true;
+            }
+            
+            // Only reset password if explicitly enabled via environment variable
+            String resetAdminPassword = System.getenv("RESET_ADMIN_PASSWORD");
+            if ("true".equalsIgnoreCase(resetAdminPassword)) {
+                admin.setPassword(passwordEncoder.encode(defaultPassword));
+                updated = true;
+                log.warn("RESET: Admin password has been reset to default 'admin123'");
+            }
+            
+            if (updated) {
+                userRepository.save(admin);
+                log.info("Updated existing admin user configuration");
+            } else {
+                log.info("Default admin user already exists with correct configuration");
+            }
         }
     }
 
