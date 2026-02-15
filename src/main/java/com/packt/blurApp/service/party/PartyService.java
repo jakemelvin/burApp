@@ -83,8 +83,19 @@ public class PartyService implements IPartyService {
             log.info("User {} auto-joined party {} as PARTICIPANT", currentUser.getUsername(), party.getId());
         }
 
-        // Initialize party members for DTO mapping
+        // Initialize lazy-loaded relationships for DTO mapping
+        if (party.getCreator() != null) {
+            org.hibernate.Hibernate.initialize(party.getCreator());
+        }
         org.hibernate.Hibernate.initialize(party.getPartyMembers());
+        
+        // Initialize users within party members
+        party.getPartyMembers().forEach(pm -> {
+            org.hibernate.Hibernate.initialize(pm.getUser());
+            if (pm.getInvitedBy() != null) {
+                org.hibernate.Hibernate.initialize(pm.getInvitedBy());
+            }
+        });
 
         return party;
     }
@@ -96,8 +107,19 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("Party not found with ID: " + id));
         
-        // Initialize party members for DTO mapping
+        // Initialize lazy-loaded relationships for DTO mapping
+        if (party.getCreator() != null) {
+            org.hibernate.Hibernate.initialize(party.getCreator());
+        }
         org.hibernate.Hibernate.initialize(party.getPartyMembers());
+        
+        // Initialize users within party members
+        party.getPartyMembers().forEach(pm -> {
+            org.hibernate.Hibernate.initialize(pm.getUser());
+            if (pm.getInvitedBy() != null) {
+                org.hibernate.Hibernate.initialize(pm.getInvitedBy());
+            }
+        });
         
         return party;
     }
@@ -109,8 +131,19 @@ public class PartyService implements IPartyService {
         Party party = partyRepository.findByPartyDate(date)
                 .orElseThrow(() -> new ResourceNotFoundExceptions("No party found for date: " + date));
         
-        // Initialize party members for DTO mapping
+        // Initialize lazy-loaded relationships for DTO mapping
+        if (party.getCreator() != null) {
+            org.hibernate.Hibernate.initialize(party.getCreator());
+        }
         org.hibernate.Hibernate.initialize(party.getPartyMembers());
+        
+        // Initialize users within party members
+        party.getPartyMembers().forEach(pm -> {
+            org.hibernate.Hibernate.initialize(pm.getUser());
+            if (pm.getInvitedBy() != null) {
+                org.hibernate.Hibernate.initialize(pm.getInvitedBy());
+            }
+        });
         
         return party;
     }
