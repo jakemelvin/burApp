@@ -220,8 +220,14 @@ public class RaceService implements IRaceService {
             throw new BadRequestException("Cannot start race without participants");
         }
         
-        // Create car attributions
-        createAttributions(race);
+        // Create car attributions only if they don't exist
+        if (race.getAttributions() == null || race.getAttributions().isEmpty()) {
+            log.info("No attributions found for race {}. Creating attributions automatically.", raceId);
+            createAttributions(race);
+        } else {
+            log.info("Race {} already has {} attributions. Skipping attribution creation.", 
+                    raceId, race.getAttributions().size());
+        }
         
         // Assign random score collector from participants
         List<User> participants = new ArrayList<>(race.getParticipants());
