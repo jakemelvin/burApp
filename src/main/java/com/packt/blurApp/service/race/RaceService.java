@@ -16,6 +16,7 @@ import com.packt.blurApp.exceptions.ResourceNotFoundExceptions;
 import com.packt.blurApp.config.security.RoleNames;
 import com.packt.blurApp.model.*;
 import com.packt.blurApp.model.enums.AttributionType;
+import com.packt.blurApp.model.enums.PartyRole;
 import com.packt.blurApp.model.enums.RaceStatus;
 import com.packt.blurApp.repository.*;
 import com.packt.blurApp.service.party.IPartyService;
@@ -57,7 +58,12 @@ public class RaceService implements IRaceService {
         // New rule: users do NOT explicitly join parties.
         // If a user creates a race for the daily party, they are implicitly considered a party member.
         if (!party.isMember(currentUser)) {
-            party.addMember(currentUser);
+            PartyMember partyMember = PartyMember.builder()
+                    .party(party)
+                    .user(currentUser)
+                    .role(PartyRole.PARTICIPANT)
+                    .build();
+            party.addPartyMember(partyMember);
             partyRepository.save(party);
         }
         
@@ -146,7 +152,12 @@ public class RaceService implements IRaceService {
         // Ensure the user is a party member (so existing backend invariants still hold).
         Party party = race.getParty();
         if (party != null && !party.isMember(user)) {
-            party.addMember(user);
+            PartyMember partyMember = PartyMember.builder()
+                    .party(party)
+                    .user(user)
+                    .role(PartyRole.PARTICIPANT)
+                    .build();
+            party.addPartyMember(partyMember);
             partyRepository.save(party);
         }
         
@@ -299,7 +310,7 @@ public class RaceService implements IRaceService {
         Race race = getRaceById(raceId);
         
         // Only creator or party managers can cancel races
-        if (!race.getCreator().equals(currentUser) && !race.getParty().isManager(currentUser)) {
+        if (!race.getCreator().equals(currentUser) && !race.getParty().canManage(currentUser)) {
             throw new ForbiddenException("Only race creator or party managers can cancel races");
         }
         
