@@ -137,6 +137,7 @@ public class Role {
                     // Scores
                     PermissionType.SUBMIT_SCORE,
                     PermissionType.VIEW_SCORE,
+                    PermissionType.EDIT_SCORE,
 
                     // Catalog + stats
                     PermissionType.VIEW_CARS,
