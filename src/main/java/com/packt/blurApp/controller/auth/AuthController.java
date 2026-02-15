@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("${api.prefix}/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -19,14 +19,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody UserSignInDto request) {
-        log.info("POST /api/auth/login - Login request for user: {}", request.getUserName());
+        log.info("POST ${api.prefix}/auth/login - Login request for user: {}", request.getUserName());
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserSignInDto request) {
-        log.info("POST /api/auth/register - Registration request for user: {}", request.getUserName());
+        log.info("POST ${api.prefix}/auth/register - Registration request for user: {}", request.getUserName());
         // By default, new users are registered as RACER
         AuthResponse response = authService.register(request, "RACER");
         return ResponseEntity.ok(response);
@@ -34,7 +34,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(@RequestHeader("Authorization") String authHeader) {
-        log.info("POST /api/auth/refresh - Token refresh request");
+        log.info("POST ${api.prefix}/auth/refresh - Token refresh request");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new IllegalArgumentException("Invalid authorization header");
