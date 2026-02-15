@@ -375,6 +375,10 @@ public class RaceService implements IRaceService {
             throw new BadRequestException("Can only assign cars for pending races");
         }
         
+        // Explicitly initialize participants to ensure they're loaded
+        org.hibernate.Hibernate.initialize(race.getParticipants());
+        log.debug("Race {} has {} participants", raceId, race.getParticipants().size());
+        
         List<Car> allCars = carRepository.findAll();
         if (allCars.isEmpty()) {
             throw new BadRequestException("No cars available in the system");
@@ -387,19 +391,27 @@ public class RaceService implements IRaceService {
         
         if (attributionType == AttributionType.ALL_USERS) {
             // Assign a single car to the race (global attribution) via Attribution
-            // Clear existing attributions first
-            if (race.getAttributions() != null) {
+            // Get current car from attributions (if any) before clearing
+            final Car currentCar;
+            if (race.getAttributions() != null && !race.getAttributions().isEmpty()) {
+                currentCar = race.getAttributions().stream()
+                        .filter(a -> a.getUser() == null && a.getCar() != null)
+                        .map(Attribution::getCar)
+                        .findFirst()
+                        .orElse(null);
+                
+                // Delete existing attributions explicitly
+                log.info("Clearing {} existing attributions for race {}", race.getAttributions().size(), raceId);
+                attributionRepository.deleteAll(race.getAttributions());
                 race.getAttributions().clear();
             } else {
-                race.setAttributions(new HashSet<>());
+                currentCar = null;
             }
             
-            // Get current car from attributions (if any)
-            Car currentCar = race.getAttributions().stream()
-                    .filter(a -> a.getUser() == null && a.getCar() != null)
-                    .map(Attribution::getCar)
-                    .findFirst()
-                    .orElse(null);
+            // Ensure attributions collection is initialized
+            if (race.getAttributions() == null) {
+                race.setAttributions(new HashSet<>());
+            }
             
             List<Car> selectableCars = allCars;
             if (currentCar != null && allCars.size() > 1) {
@@ -419,7 +431,8 @@ public class RaceService implements IRaceService {
                     .car(newCar)
                     .notes("Global car for all participants")
                     .build();
-            race.getAttributions().add(globalAttribution);
+            Attribution savedAttribution = attributionRepository.save(globalAttribution);
+            race.getAttributions().add(savedAttribution);
             log.info("Assigned global car {} to race {}", newCar.getId(), raceId);
         } else {
             // PER_USER: Assign individual cars to each participant
@@ -428,10 +441,17 @@ public class RaceService implements IRaceService {
                 throw new BadRequestException("No participants in the race to assign cars to");
             }
             
-            // Clear existing attributions
-            if (race.getAttributions() != null) {
+            log.info("Assigning cars to {} participants in race {}", participants.size(), raceId);
+            
+            // Delete existing attributions explicitly
+            if (race.getAttributions() != null && !race.getAttributions().isEmpty()) {
+                log.info("Clearing {} existing attributions for race {}", race.getAttributions().size(), raceId);
+                attributionRepository.deleteAll(race.getAttributions());
                 race.getAttributions().clear();
-            } else {
+            }
+            
+            // Ensure attributions collection is initialized
+            if (race.getAttributions() == null) {
                 race.setAttributions(new HashSet<>());
             }
             
@@ -443,9 +463,14 @@ public class RaceService implements IRaceService {
                         .user(participant)
                         .car(randomCar)
                         .build();
-                race.getAttributions().add(attribution);
-                log.info("Assigned car {} to user {} in race {}", randomCar.getId(), participant.getId(), raceId);
+                // Save each attribution immediately
+                Attribution savedAttribution = attributionRepository.save(attribution);
+                race.getAttributions().add(savedAttribution);
+                log.info("Assigned car {} (id={}) to user {} (id={}) in race {}", 
+                        randomCar.getName(), randomCar.getId(), 
+                        participant.getUsername(), participant.getId(), raceId);
             }
+            log.info("Total attributions created: {}", race.getAttributions().size());
         }
         
         Race updatedRace = raceRepository.save(race);
